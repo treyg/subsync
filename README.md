@@ -1,6 +1,7 @@
 # SubSync - Reddit Subscription Transfer
 
-A lightweight Docker application built with Bun that allows you to transfer subreddit subscriptions between Reddit accounts.
+<p style="margin-bottom:2rem;">A lightweight Docker application built with Bun that allows you to transfer subreddit subscriptions between Reddit accounts.</p>
+
 ![SubSync Interface Screenshot](images/screenshot.jpg)
 
 ## Features
