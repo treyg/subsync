@@ -1,6 +1,7 @@
 # SubSync - Reddit Subscription Transfer
 
 A lightweight Docker application built with Bun that allows you to transfer subreddit subscriptions between Reddit accounts.
+![SubSync Interface Screenshot](images/screenshot.jpg)
 
 ## Features
 
@@ -18,6 +19,8 @@ A lightweight Docker application built with Bun that allows you to transfer subr
    - Choose "script" as the application type
    - Set redirect URI to `http://localhost:3000/auth/callback`
    - Note down your client ID and secret
+
+![Reddit App Creation](images/redditapp.png)
 
 2. **Bun Runtime**: Install Bun from https://bun.sh
 
