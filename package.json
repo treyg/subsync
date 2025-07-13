@@ -1,0 +1,30 @@
+{
+  "name": "subsync",
+  "version": "1.0.0",
+  "description": "Transfer Reddit subscriptions between accounts",
+  "main": "src/server.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "build": "bun build src/server.ts --outdir ./dist --target bun",
+    "docker:build": "docker build -t reddit-transfer-app .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env reddit-transfer-app"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "keywords": [
+    "reddit",
+    "subscription",
+    "transfer",
+    "bun",
+    "docker"
+  ],
+  "author": "",
+  "license": "MIT"
+}

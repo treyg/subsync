@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reddit Subscription Transfer</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>SubSync - Reddit Subscription Transfer</h1>
+        <p>Transfer your subreddit subscriptions between Reddit accounts</p>
+      </header>
+
+      <main>
+        <div class="accounts-section">
+          <div class="account-card">
+            <h2>Source Account</h2>
+            <p>The account to copy subscriptions from</p>
+            <div id="source-status" class="account-status">
+              <span class="status-indicator disconnected"></span>
+              <span class="status-text">Not connected</span>
+            </div>
+            <button id="connect-source" class="btn btn-primary">
+              Connect Source Account
+            </button>
+          </div>
+
+          <div class="transfer-arrow">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M5 12h14m-7-7 7 7-7 7" />
+            </svg>
+          </div>
+
+          <div class="account-card">
+            <h2>Target Account</h2>
+            <p>The account to copy subscriptions to</p>
+            <div id="target-status" class="account-status">
+              <span class="status-indicator disconnected"></span>
+              <span class="status-text">Not connected</span>
+            </div>
+            <button id="connect-target" class="btn btn-primary">
+              Connect Target Account
+            </button>
+          </div>
+        </div>
+
+        <div
+          id="subscriptions-section"
+          class="subscriptions-section"
+          style="display: none"
+        >
+          <h2>Subscriptions</h2>
+          <div class="subscription-controls">
+            <button id="load-subscriptions" class="btn btn-secondary">
+              Load Subscriptions
+            </button>
+            <div class="selection-controls">
+              <button id="select-all" class="btn btn-link">Select All</button>
+              <button id="select-none" class="btn btn-link">Select None</button>
+            </div>
+          </div>
+
+          <div id="subscriptions-loading" class="loading" style="display: none">
+            <div class="spinner"></div>
+            <span>Loading subscriptions...</span>
+          </div>
+
+          <div class="search-filter" style="display: none;">
+            <input 
+              type="text" 
+              id="subscription-search" 
+              placeholder="Search subreddits..." 
+              class="search-input"
+            />
+          </div>
+
+          <div id="subscriptions-list" class="subscriptions-list"></div>
+
+          <div class="transfer-controls">
+            <div class="transfer-actions">
+              <button id="clear-all-target" class="btn btn-warning">
+                Clear All from Target
+              </button>
+              <button id="start-transfer" class="btn btn-success" disabled>
+                Start Transfer
+              </button>
+            </div>
+            <span id="selected-count" class="selected-count">0 selected</span>
+          </div>
+        </div>
+
+        <div
+          id="transfer-section"
+          class="transfer-section"
+          style="display: none"
+        >
+          <h2>Transfer Progress</h2>
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div id="progress-fill" class="progress-fill"></div>
+            </div>
+            <div class="progress-text">
+              <span id="progress-current">0</span> /
+              <span id="progress-total">0</span>
+            </div>
+          </div>
+
+          <div class="transfer-stats">
+            <div class="stat">
+              <span class="stat-number" id="stat-successful">0</span>
+              <span class="stat-label">Successful</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number" id="stat-failed">0</span>
+              <span class="stat-label">Failed</span>
+            </div>
+            <div class="stat">
+              <span class="stat-number" id="stat-skipped">0</span>
+              <span class="stat-label">Already Subscribed</span>
+            </div>
+          </div>
+
+          <div id="transfer-log" class="transfer-log"></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
