@@ -1,20 +1,30 @@
-interface TransferResult {
-  subreddit: string;
+import type { Account } from '../auth/session';
+import type { PlatformType, TransferResult } from '../platforms/types';
+import { createPlatformProvider } from '../platforms/factory';
+
+interface MultiPlatformTransferResult {
+  targetId: string;
+  targetName: string;
   success: boolean;
   error?: string;
-  alreadySubscribed?: boolean;
+  alreadyExists?: boolean;
+  platform: PlatformType;
 }
 
-interface TransferStatus {
+interface MultiPlatformTransferStatus {
   id: string;
   status: "started" | "in_progress" | "completed" | "failed";
   total: number;
   processed: number;
   successful: number;
   failed: number;
-  results: TransferResult[];
+  results: MultiPlatformTransferResult[];
   startedAt: Date;
   completedAt?: Date;
+  sourcePlatform: PlatformType;
+  targetPlatform: PlatformType;
+  sourceAccount: string;
+  targetAccount: string;
   savedPostsTransfer?: {
     enabled: boolean;
     total: number;
@@ -22,7 +32,7 @@ interface TransferStatus {
     successful: number;
     failed: number;
     results: Array<{
-      postId: string;
+      contentId: string;
       success: boolean;
       error?: string;
     }>;
@@ -34,7 +44,7 @@ class RateLimiter {
   private processing = false;
   private requestCount = 0;
   private windowStart = Date.now();
-  private readonly maxRequests = 90; // Conservative limit under 100 QPM
+  private readonly maxRequests = 80; // Conservative limit
   private readonly windowMs = 60 * 1000; // 1 minute
 
   async add<T>(fn: () => Promise<T>): Promise<T> {
@@ -82,7 +92,7 @@ class RateLimiter {
         await task();
 
         // Small delay between requests
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
     }
 
@@ -90,143 +100,36 @@ class RateLimiter {
   }
 }
 
-export function createTransferAPI() {
-  const transfers = new Map<string, TransferStatus>();
+export function createMultiPlatformTransferAPI() {
+  const transfers = new Map<string, MultiPlatformTransferStatus>();
   const rateLimiter = new RateLimiter();
-
-  async function unsubscribeFromSubreddit(
-    accessToken: string,
-    subredditName: string
-  ): Promise<TransferResult> {
-    try {
-      const response = await fetch("https://oauth.reddit.com/api/subscribe", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "reddit-transfer-app/1.0.0",
-        },
-        body: new URLSearchParams({
-          action: "unsub",
-          sr_name: subredditName,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        if (response.status === 403) {
-          return {
-            subreddit: subredditName,
-            success: false,
-            error: "Access denied - unable to unsubscribe",
-          };
-        } else if (response.status === 404) {
-          return {
-            subreddit: subredditName,
-            success: false,
-            error: "Subreddit not found",
-          };
-        }
-        
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      return {
-        subreddit: subredditName,
-        success: true,
-      };
-    } catch (error) {
-      return {
-        subreddit: subredditName,
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  async function subscribeToSubreddit(
-    accessToken: string,
-    subredditName: string
-  ): Promise<TransferResult> {
-    try {
-      const response = await fetch("https://oauth.reddit.com/api/subscribe", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "reddit-transfer-app/1.0.0",
-        },
-        body: new URLSearchParams({
-          action: "sub",
-          sr_name: subredditName,
-          skip_initial_defaults: "true",
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        if (response.status === 403) {
-          return {
-            subreddit: subredditName,
-            success: false,
-            error: "Access denied - private subreddit or banned user",
-          };
-        } else if (response.status === 404) {
-          return {
-            subreddit: subredditName,
-            success: false,
-            error: "Subreddit not found or deleted",
-          };
-        } else if (
-          response.status === 400 &&
-          errorText.includes("already_subscribed")
-        ) {
-          return {
-            subreddit: subredditName,
-            success: true,
-            alreadySubscribed: true,
-          };
-        }
-
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-
-      return {
-        subreddit: subredditName,
-        success: true,
-      };
-    } catch (error) {
-      return {
-        subreddit: subredditName,
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
 
   function startTransfer(
     transferId: string,
-    accessToken: string,
-    subreddits: string[],
+    sourceAccount: Account,
+    targetAccount: Account,
+    subscriptions: string[],
     options?: { transferSavedPosts?: boolean; savedPostsData?: any }
   ) {
-    const transfer: TransferStatus = {
+    const transfer: MultiPlatformTransferStatus = {
       id: transferId,
       status: "started",
-      total: subreddits.length,
+      total: subscriptions.length,
       processed: 0,
       successful: 0,
       failed: 0,
       results: [],
       startedAt: new Date(),
+      sourcePlatform: sourceAccount.platform,
+      targetPlatform: targetAccount.platform,
+      sourceAccount: sourceAccount.displayName,
+      targetAccount: targetAccount.displayName,
     };
 
     if (options?.transferSavedPosts && options?.savedPostsData) {
       transfer.savedPostsTransfer = {
         enabled: true,
-        total: options.savedPostsData.posts?.length || 0,
+        total: options.savedPostsData.content?.length || 0,
         processed: 0,
         successful: 0,
         failed: 0,
@@ -237,7 +140,7 @@ export function createTransferAPI() {
     transfers.set(transferId, transfer);
 
     // Start the transfer process asynchronously
-    processTransfer(transferId, accessToken, subreddits, options).catch((error) => {
+    processTransfer(transferId, sourceAccount, targetAccount, subscriptions, options).catch((error) => {
       console.error(`Transfer ${transferId} failed:`, error);
       transfer.status = "failed";
       transfer.completedAt = new Date();
@@ -248,8 +151,9 @@ export function createTransferAPI() {
 
   async function processTransfer(
     transferId: string,
-    accessToken: string,
-    subreddits: string[],
+    sourceAccount: Account,
+    targetAccount: Account,
+    subscriptions: string[],
     options?: { transferSavedPosts?: boolean; savedPostsData?: any }
   ) {
     const transfer = transfers.get(transferId);
@@ -257,113 +161,133 @@ export function createTransferAPI() {
 
     transfer.status = "in_progress";
 
-    for (const subreddit of subreddits) {
-      try {
-        const result = await rateLimiter.add(() =>
-          subscribeToSubreddit(accessToken, subreddit)
-        );
+    try {
+      const targetProvider = createPlatformProvider(targetAccount.platform);
 
-        transfer.results.push(result);
-        transfer.processed++;
-
-        if (result.success) {
-          transfer.successful++;
-        } else {
-          transfer.failed++;
-        }
-
-        console.log(
-          `Transfer ${transferId}: ${transfer.processed}/${
-            transfer.total
-          } - ${subreddit} ${result.success ? "SUCCESS" : "FAILED"}`
-        );
-      } catch (error) {
-        console.error(`Transfer ${transferId} error for ${subreddit}:`, error);
-        transfer.results.push({
-          subreddit,
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-        transfer.processed++;
-        transfer.failed++;
-      }
-    }
-
-    // Process saved posts if enabled
-    if (options?.transferSavedPosts && options?.savedPostsData && transfer.savedPostsTransfer) {
-      console.log(`Transfer ${transferId}: Starting saved posts transfer...`);
-      
-      const { createSavedPostsAPI } = await import('./savedPosts');
-      const savedPostsAPI = createSavedPostsAPI();
-      
-      for (const post of options.savedPostsData.posts) {
+      for (const subscriptionId of subscriptions) {
         try {
           const result = await rateLimiter.add(() =>
-            savedPostsAPI.savePost(accessToken, post.name)
+            targetProvider.subscribe(targetAccount.accessToken, subscriptionId)
           );
 
-          transfer.savedPostsTransfer.results.push({
-            postId: post.name,
+          const multiPlatformResult: MultiPlatformTransferResult = {
+            targetId: result.targetId,
+            targetName: result.targetName,
             success: result.success,
             error: result.error,
-          });
-          
-          transfer.savedPostsTransfer.processed++;
+            alreadyExists: result.alreadyExists,
+            platform: targetAccount.platform,
+          };
+
+          transfer.results.push(multiPlatformResult);
+          transfer.processed++;
 
           if (result.success) {
-            transfer.savedPostsTransfer.successful++;
+            transfer.successful++;
           } else {
-            transfer.savedPostsTransfer.failed++;
+            transfer.failed++;
           }
 
           console.log(
-            `Transfer ${transferId} saved posts: ${transfer.savedPostsTransfer.processed}/${
-              transfer.savedPostsTransfer.total
-            } - ${post.title} ${result.success ? "SAVED" : "FAILED"}`
+            `Transfer ${transferId}: ${transfer.processed}/${transfer.total} - ${result.targetName} ${result.success ? "SUCCESS" : "FAILED"}`
           );
         } catch (error) {
-          console.error(`Transfer ${transferId} saved posts error for ${post.title}:`, error);
-          transfer.savedPostsTransfer.results.push({
-            postId: post.name,
+          console.error(`Transfer ${transferId} error for ${subscriptionId}:`, error);
+          transfer.results.push({
+            targetId: subscriptionId,
+            targetName: subscriptionId,
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
+            platform: targetAccount.platform,
           });
-          transfer.savedPostsTransfer.processed++;
-          transfer.savedPostsTransfer.failed++;
+          transfer.processed++;
+          transfer.failed++;
         }
       }
-    }
 
-    transfer.status = "completed";
-    transfer.completedAt = new Date();
+      // Process saved content if enabled
+      if (options?.transferSavedPosts && options?.savedPostsData && transfer.savedPostsTransfer) {
+        console.log(`Transfer ${transferId}: Starting saved content transfer...`);
+        
+        const sourceProvider = createPlatformProvider(sourceAccount.platform);
+        const targetProvider = createPlatformProvider(targetAccount.platform);
 
-    console.log(
-      `Transfer ${transferId} completed: ${transfer.successful}/${transfer.total} subreddits successful`
-    );
-    
-    if (transfer.savedPostsTransfer) {
+        if (sourceProvider.getContent && targetProvider.saveContent) {
+          for (const content of options.savedPostsData.content) {
+            try {
+              const result = await rateLimiter.add(() =>
+                targetProvider.saveContent!(targetAccount.accessToken, content.name)
+              );
+
+              transfer.savedPostsTransfer.results.push({
+                contentId: content.id,
+                success: result.success,
+                error: result.error,
+              });
+              
+              transfer.savedPostsTransfer.processed++;
+
+              if (result.success) {
+                transfer.savedPostsTransfer.successful++;
+              } else {
+                transfer.savedPostsTransfer.failed++;
+              }
+
+              console.log(
+                `Transfer ${transferId} saved content: ${transfer.savedPostsTransfer.processed}/${
+                  transfer.savedPostsTransfer.total
+                } - ${content.title} ${result.success ? "SAVED" : "FAILED"}`
+              );
+            } catch (error) {
+              console.error(`Transfer ${transferId} saved content error for ${content.title}:`, error);
+              transfer.savedPostsTransfer.results.push({
+                contentId: content.id,
+                success: false,
+                error: error instanceof Error ? error.message : "Unknown error",
+              });
+              transfer.savedPostsTransfer.processed++;
+              transfer.savedPostsTransfer.failed++;
+            }
+          }
+        } else {
+          console.warn(`Transfer ${transferId}: Content transfer not supported between ${sourceAccount.platform} and ${targetAccount.platform}`);
+        }
+      }
+
+      transfer.status = "completed";
+      transfer.completedAt = new Date();
+
       console.log(
-        `Transfer ${transferId} saved posts completed: ${transfer.savedPostsTransfer.successful}/${transfer.savedPostsTransfer.total} posts saved`
+        `Transfer ${transferId} completed: ${transfer.successful}/${transfer.total} subscriptions successful`
       );
+      
+      if (transfer.savedPostsTransfer) {
+        console.log(
+          `Transfer ${transferId} saved content completed: ${transfer.savedPostsTransfer.successful}/${transfer.savedPostsTransfer.total} content saved`
+        );
+      }
+    } catch (error) {
+      console.error(`Transfer ${transferId} failed:`, error);
+      transfer.status = "failed";
+      transfer.completedAt = new Date();
     }
   }
 
-  function getTransferStatus(transferId: string): TransferStatus | null {
+  function getTransferStatus(transferId: string): MultiPlatformTransferStatus | null {
     return transfers.get(transferId) || null;
   }
 
-  function getAllTransfers(): TransferStatus[] {
+  function getAllTransfers(): MultiPlatformTransferStatus[] {
     return Array.from(transfers.values());
   }
 
-  async function clearAllSubscriptions(accessToken: string): Promise<string> {
-    const subscriptionAPI = await import('./subscriptions').then(m => m.createSubscriptionAPI());
-    
+  async function clearAllSubscriptions(targetAccount: Account): Promise<string> {
     try {
-      const subscriptions = await subscriptionAPI.getSubscriptions(accessToken);
+      const targetProvider = createPlatformProvider(targetAccount.platform);
+      const subscriptions = await targetProvider.getSubscriptions(targetAccount.accessToken);
       const transferId = crypto.randomUUID();
       
-      const transfer: TransferStatus = {
+      const transfer: MultiPlatformTransferStatus = {
         id: transferId,
         status: "started",
         total: subscriptions.length,
@@ -372,12 +296,16 @@ export function createTransferAPI() {
         failed: 0,
         results: [],
         startedAt: new Date(),
+        sourcePlatform: targetAccount.platform,
+        targetPlatform: targetAccount.platform,
+        sourceAccount: targetAccount.displayName,
+        targetAccount: targetAccount.displayName,
       };
 
       transfers.set(transferId, transfer);
       
       // Start the clear process asynchronously
-      processClearAll(transferId, accessToken, subscriptions.map(s => s.display_name)).catch((error) => {
+      processClearAll(transferId, targetAccount, subscriptions.map(s => s.id)).catch((error) => {
         console.error(`Clear all ${transferId} failed:`, error);
         transfer.status = "failed";
         transfer.completedAt = new Date();
@@ -391,52 +319,68 @@ export function createTransferAPI() {
 
   async function processClearAll(
     transferId: string,
-    accessToken: string,
-    subreddits: string[]
+    targetAccount: Account,
+    subscriptionIds: string[]
   ) {
     const transfer = transfers.get(transferId);
     if (!transfer) return;
 
     transfer.status = "in_progress";
 
-    for (const subreddit of subreddits) {
-      try {
-        const result = await rateLimiter.add(() =>
-          unsubscribeFromSubreddit(accessToken, subreddit)
-        );
+    try {
+      const targetProvider = createPlatformProvider(targetAccount.platform);
 
-        transfer.results.push(result);
-        transfer.processed++;
+      for (const subscriptionId of subscriptionIds) {
+        try {
+          const result = await rateLimiter.add(() =>
+            targetProvider.unsubscribe(targetAccount.accessToken, subscriptionId)
+          );
 
-        if (result.success) {
-          transfer.successful++;
-        } else {
+          const multiPlatformResult: MultiPlatformTransferResult = {
+            targetId: result.targetId,
+            targetName: result.targetName,
+            success: result.success,
+            error: result.error,
+            platform: targetAccount.platform,
+          };
+
+          transfer.results.push(multiPlatformResult);
+          transfer.processed++;
+
+          if (result.success) {
+            transfer.successful++;
+          } else {
+            transfer.failed++;
+          }
+
+          console.log(
+            `Clear all ${transferId}: ${transfer.processed}/${transfer.total} - ${result.targetName} ${result.success ? "UNSUBSCRIBED" : "FAILED"}`
+          );
+        } catch (error) {
+          console.error(`Clear all ${transferId} error for ${subscriptionId}:`, error);
+          transfer.results.push({
+            targetId: subscriptionId,
+            targetName: subscriptionId,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+            platform: targetAccount.platform,
+          });
+          transfer.processed++;
           transfer.failed++;
         }
-
-        console.log(
-          `Clear all ${transferId}: ${transfer.processed}/${
-            transfer.total
-          } - ${subreddit} ${result.success ? "UNSUBSCRIBED" : "FAILED"}`
-        );
-      } catch (error) {
-        console.error(`Clear all ${transferId} error for ${subreddit}:`, error);
-        transfer.results.push({
-          subreddit,
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-        transfer.processed++;
-        transfer.failed++;
       }
+
+      transfer.status = "completed";
+      transfer.completedAt = new Date();
+
+      console.log(
+        `Clear all ${transferId} completed: ${transfer.successful}/${transfer.total} unsubscribed`
+      );
+    } catch (error) {
+      console.error(`Clear all ${transferId} failed:`, error);
+      transfer.status = "failed";
+      transfer.completedAt = new Date();
     }
-
-    transfer.status = "completed";
-    transfer.completedAt = new Date();
-
-    console.log(
-      `Clear all ${transferId} completed: ${transfer.successful}/${transfer.total} unsubscribed`
-    );
   }
 
   return {
