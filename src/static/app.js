@@ -19,17 +19,17 @@ class MultiPlatformTransferApp {
       // Platform selection
       sourcePlatform: document.getElementById("source-platform"),
       targetPlatform: document.getElementById("target-platform"),
-      
+
       // Account connection
       connectSource: document.getElementById("connect-source"),
       connectTarget: document.getElementById("connect-target"),
       sourceStatus: document.getElementById("source-status"),
       targetStatus: document.getElementById("target-status"),
-      
+
       // Platform compatibility
       platformCompatibility: document.getElementById("platform-compatibility"),
       compatibilityMessage: document.getElementById("compatibility-message"),
-      
+
       // Subscriptions
       subscriptionsSection: document.getElementById("subscriptions-section"),
       subscriptionsTitle: document.getElementById("subscriptions-title"),
@@ -41,7 +41,7 @@ class MultiPlatformTransferApp {
       startTransfer: document.getElementById("start-transfer"),
       selectedCount: document.getElementById("selected-count"),
       clearAllTarget: document.getElementById("clear-all-target"),
-      
+
       // Transfer progress
       transferSection: document.getElementById("transfer-section"),
       progressFill: document.getElementById("progress-fill"),
@@ -51,21 +51,23 @@ class MultiPlatformTransferApp {
       statFailed: document.getElementById("stat-failed"),
       statSkipped: document.getElementById("stat-skipped"),
       transferLog: document.getElementById("transfer-log"),
-      
+
       // Search and filter
       searchFilter: document.querySelector(".search-filter"),
       subscriptionSearch: document.getElementById("subscription-search"),
-      
+
       // Content transfer
       transferSavedPosts: document.getElementById("transfer-saved-posts"),
       savedPostsCount: document.getElementById("saved-posts-count"),
       contentTransferTitle: document.getElementById("content-transfer-title"),
       contentTransferLabel: document.getElementById("content-transfer-label"),
       contentTransferNote: document.getElementById("content-transfer-note"),
-      
+
       // Content transfer progress
       savedPostsProgress: document.getElementById("saved-posts-progress"),
-      savedPostsProgressFill: document.getElementById("saved-posts-progress-fill"),
+      savedPostsProgressFill: document.getElementById(
+        "saved-posts-progress-fill"
+      ),
       savedPostsCurrent: document.getElementById("saved-posts-current"),
       savedPostsTotal: document.getElementById("saved-posts-total"),
       savedPostsSuccessful: document.getElementById("saved-posts-successful"),
@@ -81,7 +83,7 @@ class MultiPlatformTransferApp {
     this.elements.targetPlatform.addEventListener("change", (e) =>
       this.onPlatformChange("target", e.target.value)
     );
-    
+
     // Account connection
     this.elements.connectSource.addEventListener("click", () =>
       this.connectAccount("source")
@@ -89,7 +91,7 @@ class MultiPlatformTransferApp {
     this.elements.connectTarget.addEventListener("click", () =>
       this.connectAccount("target")
     );
-    
+
     // Subscriptions
     this.elements.loadSubscriptions.addEventListener("click", () =>
       this.loadSubscriptions()
@@ -112,7 +114,7 @@ class MultiPlatformTransferApp {
       const response = await fetch("/api/platforms");
       const data = await response.json();
       this.platforms = data.platforms;
-      
+
       this.populatePlatformSelects();
     } catch (error) {
       console.error("Failed to load platforms:", error);
@@ -120,16 +122,19 @@ class MultiPlatformTransferApp {
   }
 
   populatePlatformSelects() {
-    const selects = [this.elements.sourcePlatform, this.elements.targetPlatform];
-    
-    selects.forEach(select => {
+    const selects = [
+      this.elements.sourcePlatform,
+      this.elements.targetPlatform,
+    ];
+
+    selects.forEach((select) => {
       // Clear existing options except the first one
       while (select.children.length > 1) {
         select.removeChild(select.lastChild);
       }
-      
+
       // Add platform options
-      this.platforms.forEach(platform => {
+      this.platforms.forEach((platform) => {
         const option = document.createElement("option");
         option.value = platform.id;
         option.textContent = platform.name;
@@ -144,41 +149,46 @@ class MultiPlatformTransferApp {
 
   onPlatformChange(type, platformId) {
     this.selectedPlatforms[type] = platformId || null;
-    
+
     // Force target platform to match source platform
-    if (type === 'source' && platformId) {
+    if (type === "source" && platformId) {
       this.selectedPlatforms.target = platformId;
       this.elements.targetPlatform.value = platformId;
-    } else if (type === 'target' && platformId) {
+    } else if (type === "target" && platformId) {
       this.selectedPlatforms.source = platformId;
       this.elements.sourcePlatform.value = platformId;
     }
-    
+
     // Enable/disable connect button
-    const connectButton = this.elements[`connect${type.charAt(0).toUpperCase() + type.slice(1)}`];
+    const connectButton =
+      this.elements[`connect${type.charAt(0).toUpperCase() + type.slice(1)}`];
     connectButton.disabled = !platformId;
-    
+
     this.updatePlatformCompatibility();
     this.updateUI();
   }
 
   updatePlatformCompatibility() {
     const { source, target } = this.selectedPlatforms;
-    
+
     if (source && target) {
       this.elements.platformCompatibility.style.display = "block";
-      
+
       let message = "";
       let className = "";
-      
+
       if (source === target) {
-        message = `✓ ${this.getPlatformName(source)} to ${this.getPlatformName(target)} transfer`;
+        message = `✓ ${this.getPlatformName(source)} to ${this.getPlatformName(
+          target
+        )} transfer`;
         className = "compatible";
       } else {
-        message = `⚠ Cross-platform transfer: ${this.getPlatformName(source)} to ${this.getPlatformName(target)}`;
+        message = `⚠ Cross-platform transfer: ${this.getPlatformName(
+          source
+        )} to ${this.getPlatformName(target)}`;
         className = "cross-platform";
       }
-      
+
       this.elements.compatibilityMessage.textContent = message;
       this.elements.compatibilityMessage.className = className;
     } else {
@@ -187,7 +197,7 @@ class MultiPlatformTransferApp {
   }
 
   getPlatformName(platformId) {
-    const platform = this.platforms.find(p => p.id === platformId);
+    const platform = this.platforms.find((p) => p.id === platformId);
     return platform ? platform.name : platformId;
   }
 
@@ -195,28 +205,33 @@ class MultiPlatformTransferApp {
     // Update labels based on selected platforms
     const sourcePlatform = this.selectedPlatforms.source;
     const targetPlatform = this.selectedPlatforms.target;
-    
+
     if (sourcePlatform) {
       const platformName = this.getPlatformName(sourcePlatform);
-      
+
       // Update subscriptions title
-      if (sourcePlatform === 'reddit') {
-        this.elements.subscriptionsTitle.textContent = "Subreddit Subscriptions";
+      if (sourcePlatform === "reddit") {
+        this.elements.subscriptionsTitle.textContent =
+          "Subreddit Subscriptions";
         this.elements.subscriptionSearch.placeholder = "Search subreddits...";
-      } else if (sourcePlatform === 'youtube') {
+      } else if (sourcePlatform === "youtube") {
         this.elements.subscriptionsTitle.textContent = "YouTube Subscriptions";
         this.elements.subscriptionSearch.placeholder = "Search channels...";
       }
-      
+
       // Update content transfer labels
-      if (sourcePlatform === 'reddit') {
+      if (sourcePlatform === "reddit") {
         this.elements.contentTransferTitle.textContent = "Saved Posts Transfer";
-        this.elements.contentTransferLabel.textContent = "Also transfer saved posts from source account";
-        this.elements.contentTransferNote.textContent = "Saved posts will be automatically fetched from your source account and transferred to your target account.";
-      } else if (sourcePlatform === 'youtube') {
+        this.elements.contentTransferLabel.textContent =
+          "Also transfer saved posts from source account";
+        this.elements.contentTransferNote.textContent =
+          "Saved posts will be automatically fetched from your source account and transferred to your target account.";
+      } else if (sourcePlatform === "youtube") {
         this.elements.contentTransferTitle.textContent = "Playlist Transfer";
-        this.elements.contentTransferLabel.textContent = "Also transfer playlists from source account";
-        this.elements.contentTransferNote.textContent = "Playlists will be automatically fetched from your source account and transferred to your target account.";
+        this.elements.contentTransferLabel.textContent =
+          "Also transfer playlists from source account";
+        this.elements.contentTransferNote.textContent =
+          "Playlists will be automatically fetched from your source account and transferred to your target account.";
       }
     }
   }
@@ -246,7 +261,7 @@ class MultiPlatformTransferApp {
       if (status.sourceAccount && status.targetAccount) {
         this.elements.subscriptionsSection.style.display = "block";
       }
-      
+
       // Enable clear all button only if target account is connected
       this.elements.clearAllTarget.disabled = !status.targetAccount;
     } catch (error) {
@@ -264,16 +279,16 @@ class MultiPlatformTransferApp {
 
     if (account) {
       indicator.className = "status-indicator connected";
-      
+
       let displayName = account.displayName || account.username;
       let platformPrefix = "";
-      
-      if (account.platform === 'reddit') {
+
+      if (account.platform === "reddit") {
         platformPrefix = "u/";
-      } else if (account.platform === 'youtube') {
+      } else if (account.platform === "youtube") {
         platformPrefix = "";
       }
-      
+
       text.textContent = `Connected as ${platformPrefix}${displayName}`;
       connectButton.textContent = `Reconnect ${
         type.charAt(0).toUpperCase() + type.slice(1)
@@ -295,7 +310,7 @@ class MultiPlatformTransferApp {
       alert("Please select a platform first.");
       return;
     }
-    
+
     window.location.href = `/auth/login?type=${type}&platform=${platform}`;
   }
 
@@ -307,7 +322,33 @@ class MultiPlatformTransferApp {
       const response = await fetch("/api/subscriptions");
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        let errorData;
+        const responseText = await response.text();
+
+        try {
+          errorData = JSON.parse(responseText);
+        } catch {
+          // Fallback to text if not JSON
+          errorData = { error: "unknown", message: responseText };
+        }
+
+        // Check for quota exceeded error
+        if (response.status === 403 && errorData.error === "quota_exceeded") {
+          this.showQuotaExceededDialog();
+          return;
+        }
+
+        // Check for authentication errors
+        if (response.status === 401 || errorData.error === "auth_expired") {
+          alert(
+            "Your authentication has expired. Please reconnect your source account."
+          );
+          return;
+        }
+
+        throw new Error(
+          `HTTP ${response.status}: ${errorData.message || responseText}`
+        );
       }
 
       this.subscriptions = await response.json();
@@ -315,13 +356,72 @@ class MultiPlatformTransferApp {
       this.elements.searchFilter.style.display = "block";
     } catch (error) {
       console.error("Failed to load subscriptions:", error);
-      alert(
-        "Failed to load subscriptions. Please check your source account connection."
-      );
+
+      // Parse error message for quota issues (fallback for any missed cases)
+      const errorMessage = error.message || "";
+      if (
+        errorMessage.includes("quota exceeded") ||
+        errorMessage.includes("quotaExceeded") ||
+        errorMessage.includes("quota_exceeded")
+      ) {
+        this.showQuotaExceededDialog();
+      } else {
+        alert(
+          "Failed to load subscriptions. Please check your source account connection."
+        );
+      }
     } finally {
       this.elements.subscriptionsLoading.style.display = "none";
       this.elements.loadSubscriptions.disabled = false;
     }
+  }
+
+  showQuotaExceededDialog() {
+    const platform = this.selectedPlatforms.source;
+    const platformName = platform === "youtube" ? "YouTube" : platform;
+
+    // Create a more informative dialog
+    const dialog = document.createElement("div");
+    dialog.className = "quota-dialog-overlay";
+    dialog.innerHTML = `
+      <div class="quota-dialog">
+        <div class="quota-dialog-header">
+          <h3>⚠️ ${platformName} API Quota Exceeded</h3>
+        </div>
+        <div class="quota-dialog-content">
+          <p>Your ${platformName} API quota has been exceeded for today.</p>
+          <p><strong>What this means:</strong></p>
+          <ul>
+            <li>You've reached the daily limit on your account for ${platformName} API requests</li>
+            <li>The quota resets every 24 hours</li>
+          </ul>
+          <p><strong>What you can do:</strong></p>
+          <ul>
+            <li>Wait 24 hours and try again tomorrow</li>
+            <li>Try with a smaller number of subscriptions</li>
+            ${
+              platform === "youtube"
+                ? "<li>Consider requesting a quota increase in Google Cloud Console (rarely approved for personal use)</li>"
+                : ""
+            }
+          </ul>
+        </div>
+        <div class="quota-dialog-actions">
+          <button onclick="this.closest('.quota-dialog-overlay').remove()" class="btn btn-primary">
+            Understand
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(dialog);
+
+    // Remove dialog when clicking outside
+    dialog.addEventListener("click", (e) => {
+      if (e.target === dialog) {
+        dialog.remove();
+      }
+    });
   }
 
   renderSubscriptions() {
@@ -336,7 +436,9 @@ class MultiPlatformTransferApp {
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.id = `sub-${sub.id}`;
-      checkbox.addEventListener("change", () => this.toggleSubscription(sub.id));
+      checkbox.addEventListener("change", () =>
+        this.toggleSubscription(sub.id)
+      );
 
       const label = document.createElement("label");
       label.htmlFor = `sub-${sub.id}`;
@@ -350,7 +452,7 @@ class MultiPlatformTransferApp {
 
       const meta = document.createElement("div");
       meta.className = "subscription-meta";
-      
+
       let metaText = "";
       if (sub.subscriberCount) {
         metaText += `${sub.subscriberCount.toLocaleString()} subscribers`;
@@ -368,7 +470,9 @@ class MultiPlatformTransferApp {
       if (sub.description) {
         const description = document.createElement("div");
         description.className = "subscription-description";
-        description.textContent = sub.description.substring(0, 100) + (sub.description.length > 100 ? "..." : "");
+        description.textContent =
+          sub.description.substring(0, 100) +
+          (sub.description.length > 100 ? "..." : "");
         info.appendChild(description);
       }
 
@@ -423,15 +527,19 @@ class MultiPlatformTransferApp {
   }
 
   filterSubscriptions(query) {
-    const items = this.elements.subscriptionsList.querySelectorAll(
-      ".subscription-item"
-    );
+    const items =
+      this.elements.subscriptionsList.querySelectorAll(".subscription-item");
     const lowerQuery = query.toLowerCase();
 
     items.forEach((item) => {
-      const name = item.querySelector(".subscription-name").textContent.toLowerCase();
-      const description = item.querySelector(".subscription-description")?.textContent?.toLowerCase() || "";
-      
+      const name = item
+        .querySelector(".subscription-name")
+        .textContent.toLowerCase();
+      const description =
+        item
+          .querySelector(".subscription-description")
+          ?.textContent?.toLowerCase() || "";
+
       if (name.includes(lowerQuery) || description.includes(lowerQuery)) {
         item.style.display = "block";
       } else {
@@ -494,7 +602,11 @@ class MultiPlatformTransferApp {
   }
 
   async clearAllTarget() {
-    if (!confirm("Are you sure you want to clear all subscriptions from the target account? This action cannot be undone.")) {
+    if (
+      !confirm(
+        "Are you sure you want to clear all subscriptions from the target account? This action cannot be undone."
+      )
+    ) {
       return;
     }
 
@@ -545,31 +657,51 @@ class MultiPlatformTransferApp {
 
   updateTransferProgress(status) {
     // Update main progress
-    const progress = status.total > 0 ? (status.processed / status.total) * 100 : 0;
+    const progress =
+      status.total > 0 ? (status.processed / status.total) * 100 : 0;
     this.elements.progressFill.style.width = `${progress}%`;
     this.elements.progressCurrent.textContent = status.processed;
     this.elements.progressTotal.textContent = status.total;
 
+    // Analyze errors for quota issues
+    const quotaErrors =
+      status.results?.filter(
+        (r) => r.error && r.error.includes("quota exceeded")
+      ).length || 0;
+
+    const regularFailed = (status.failed || 0) - quotaErrors;
+
     // Update stats
     this.elements.statSuccessful.textContent = status.successful;
-    this.elements.statFailed.textContent = status.failed;
-    
+    this.elements.statFailed.textContent = regularFailed;
+
     // Count already exists items
-    const alreadyExists = status.results?.filter(r => r.alreadyExists).length || 0;
+    const alreadyExists =
+      status.results?.filter((r) => r.alreadyExists).length || 0;
     this.elements.statSkipped.textContent = alreadyExists;
+
+    // Show quota warning if quota errors detected
+    this.updateQuotaWarning(quotaErrors, status);
 
     // Update saved posts progress if enabled
     if (status.savedPostsTransfer) {
       this.elements.savedPostsProgress.style.display = "block";
-      
-      const savedProgress = status.savedPostsTransfer.total > 0 
-        ? (status.savedPostsTransfer.processed / status.savedPostsTransfer.total) * 100 
-        : 0;
+
+      const savedProgress =
+        status.savedPostsTransfer.total > 0
+          ? (status.savedPostsTransfer.processed /
+              status.savedPostsTransfer.total) *
+            100
+          : 0;
       this.elements.savedPostsProgressFill.style.width = `${savedProgress}%`;
-      this.elements.savedPostsCurrent.textContent = status.savedPostsTransfer.processed;
-      this.elements.savedPostsTotal.textContent = status.savedPostsTransfer.total;
-      this.elements.savedPostsSuccessful.textContent = status.savedPostsTransfer.successful;
-      this.elements.savedPostsFailed.textContent = status.savedPostsTransfer.failed;
+      this.elements.savedPostsCurrent.textContent =
+        status.savedPostsTransfer.processed;
+      this.elements.savedPostsTotal.textContent =
+        status.savedPostsTransfer.total;
+      this.elements.savedPostsSuccessful.textContent =
+        status.savedPostsTransfer.successful;
+      this.elements.savedPostsFailed.textContent =
+        status.savedPostsTransfer.failed;
     }
 
     // Update log with recent results
@@ -577,29 +709,105 @@ class MultiPlatformTransferApp {
       const recentResults = status.results.slice(-5); // Show last 5 results
       const logHTML = recentResults
         .map((result) => {
-          const statusIcon = result.success ? "✓" : "✗";
-          const statusClass = result.success ? "success" : "error";
+          const isQuotaError =
+            result.error && result.error.includes("quota exceeded");
+          const statusIcon = result.success ? "✓" : isQuotaError ? "⚠" : "✗";
+          let statusClass = result.success ? "success" : "error";
+          if (isQuotaError) statusClass = "quota-exceeded";
+
           let message = `${statusIcon} ${result.targetName}`;
-          
+
           if (result.alreadyExists) {
             message += " (already exists)";
           } else if (result.error) {
-            message += ` - ${result.error}`;
+            if (isQuotaError) {
+              message += " - Quota exceeded";
+            } else {
+              message += ` - ${result.error}`;
+            }
           }
-          
+
           return `<div class="log-entry ${statusClass}">${message}</div>`;
         })
         .join("");
-      
+
       this.elements.transferLog.innerHTML = logHTML;
     }
 
     // Show completion message
     if (status.status === "completed") {
-      const message = `Transfer completed! ${status.successful}/${status.total} items transferred successfully.`;
+      const quotaErrors =
+        status.results?.filter(
+          (r) => r.error && r.error.includes("quota exceeded")
+        ).length || 0;
+
+      let message = `Transfer completed! ${status.successful}/${status.total} items transferred successfully.`;
+      if (quotaErrors > 0) {
+        message += ` ${quotaErrors} items were skipped due to quota limits.`;
+      }
       this.elements.transferLog.innerHTML += `<div class="log-entry success"><strong>${message}</strong></div>`;
     } else if (status.status === "failed") {
       this.elements.transferLog.innerHTML += `<div class="log-entry error"><strong>Transfer failed. Please try again.</strong></div>`;
+    }
+  }
+
+  updateQuotaWarning(quotaErrors, status) {
+    // Remove existing quota warnings
+    const existingWarning = document.getElementById("quota-warning");
+    if (existingWarning) {
+      existingWarning.remove();
+    }
+
+    if (quotaErrors > 0) {
+      const warningDiv = document.createElement("div");
+      warningDiv.id = "quota-warning";
+      warningDiv.className = "quota-warning";
+
+      const platform = status.sourcePlatform || status.targetPlatform;
+      let platformName = platform === "youtube" ? "YouTube" : platform;
+
+      warningDiv.innerHTML = `
+        <div class="warning-header">⚠️ ${platformName} API Quota Exceeded</div>
+        <div class="warning-message">
+          ${quotaErrors} subscription${
+        quotaErrors > 1 ? "s" : ""
+      } could not be transferred due to daily quota limits.
+          <br><strong>Please wait 24 hours before trying again.</strong>
+        </div>
+        <div class="warning-stats">
+          <span class="quota-failed">${quotaErrors} quota limited</span>
+        </div>
+      `;
+
+      // Insert warning before transfer stats
+      const transferSection = this.elements.transferSection;
+      const progressContainer = transferSection.querySelector(
+        ".progress-container"
+      );
+      transferSection.insertBefore(warningDiv, progressContainer);
+
+      // Update stats to show quota errors separately
+      this.updateStatsWithQuota(quotaErrors);
+    }
+  }
+
+  updateStatsWithQuota(quotaErrors) {
+    if (quotaErrors > 0) {
+      // Add quota stat if it doesn't exist
+      let quotaStat = document.getElementById("stat-quota");
+      if (!quotaStat) {
+        const statsContainer =
+          this.elements.transferSection.querySelector(".transfer-stats");
+        const quotaStatDiv = document.createElement("div");
+        quotaStatDiv.className = "stat quota-stat";
+        quotaStatDiv.innerHTML = `
+          <span class="stat-number" id="stat-quota">${quotaErrors}</span>
+          <span class="stat-label">Quota Limited</span>
+        `;
+        statsContainer.appendChild(quotaStatDiv);
+      } else {
+        quotaStat.textContent = quotaErrors;
+      }
     }
   }
 }

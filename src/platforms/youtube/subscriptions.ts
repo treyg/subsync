@@ -164,14 +164,40 @@ export function createYouTubeSubscriptions() {
         const errorText = await response.text();
         console.error(`YouTube: Subscribe error for ${channelId}:`, errorText);
 
-        if (response.status === 403) {
+        // Parse JSON error response
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = null;
+        }
+
+        if (response.status === 400) {
           // Check if it's already subscribed
-          if (errorText.includes("subscriptionDuplicate")) {
+          if (errorText.includes("subscriptionDuplicate") || 
+              errorData?.error?.errors?.[0]?.reason === "subscriptionDuplicate") {
             return {
               targetId: channelId,
               targetName: channelId,
               success: true,
               alreadyExists: true,
+            };
+          }
+          return {
+            targetId: channelId,
+            targetName: channelId,
+            success: false,
+            error: errorData?.error?.message || "Bad request",
+          };
+        } else if (response.status === 403) {
+          // Check for quota exceeded
+          if (errorText.includes("quotaExceeded") || 
+              errorData?.error?.errors?.[0]?.reason === "quotaExceeded") {
+            return {
+              targetId: channelId,
+              targetName: channelId,
+              success: false,
+              error: "YouTube API quota exceeded. Please wait 24 hours before trying again.",
             };
           }
           return {

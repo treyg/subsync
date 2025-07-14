@@ -275,6 +275,31 @@ async function handleGetSubscriptions(req: Request, session: Session) {
     });
   } catch (error) {
     console.error('Get subscriptions error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Check for quota exceeded errors
+    if (errorMessage.includes('quota exceeded') || errorMessage.includes('quotaExceeded')) {
+      return new Response(JSON.stringify({ 
+        error: 'quota_exceeded',
+        message: errorMessage
+      }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Check for authentication errors
+    if (errorMessage.includes('Access token expired') || errorMessage.includes('invalid')) {
+      return new Response(JSON.stringify({ 
+        error: 'auth_expired',
+        message: 'Authentication expired. Please reconnect your account.'
+      }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
     return new Response(JSON.stringify({ error: 'Failed to fetch subscriptions' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
