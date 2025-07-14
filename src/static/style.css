@@ -410,3 +410,131 @@ header p {
         gap: 1.5rem;
     }
 }
+
+/* Saved Posts Styles */
+.saved-posts-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.saved-posts-section h3 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.limitation-notice {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    color: #856404;
+}
+
+.limitation-notice p {
+    margin-bottom: 0.5rem;
+}
+
+.limitation-notice ol {
+    margin: 0.5rem 0 0 1.5rem;
+    padding: 0;
+}
+
+.limitation-notice li {
+    margin-bottom: 0.25rem;
+}
+
+.limitation-notice a {
+    color: #0066cc;
+    text-decoration: underline;
+}
+
+.saved-posts-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.saved-posts-note {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+    font-style: italic;
+}
+
+.file-upload-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.file-status {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.file-status.success {
+    color: #28a745;
+}
+
+.file-status.error {
+    color: #dc3545;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.checkbox-wrapper input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.count {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.saved-posts-progress {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 1rem;
+}
+
+.saved-posts-progress h3 {
+    margin-bottom: 1rem;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .saved-posts-controls {
+        gap: 0.75rem;
+    }
+    
+    .file-upload-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+    
+    .checkbox-wrapper {
+        font-size: 0.9rem;
+    }
+}

@@ -1,6 +1,6 @@
-# SubSync - Reddit Subscription Transfer
+# SubSync - Reddit Subscription & Saved Posts Transfer
 
-<p style="margin-bottom:2rem;">A lightweight Docker application built with Bun that allows you to transfer subreddit subscriptions between Reddit accounts.</p>
+<p style="margin-bottom:2rem;">A lightweight Docker application built with Bun that allows you to transfer subreddit subscriptions and saved posts between Reddit accounts.</p>
 
 ![SubSync Interface Screenshot](images/screenshot.jpg)
 
@@ -8,9 +8,10 @@
 
 - **Dual OAuth Authentication**: Securely connect two Reddit accounts
 - **Subscription Management**: View and select subscriptions from source account
+- **Saved Posts Transfer**: Automatically transfer saved posts between accounts
 - **Rate-Limited Transfers**: Respects Reddit's API limits (100 requests/minute)
-- **Real-time Progress**: Live transfer progress with detailed logging
-- **Error Handling**: Robust error handling for failed subscriptions
+- **Real-time Progress**: Live transfer progress with detailed logging for both subscriptions and saved posts
+- **Error Handling**: Robust error handling for failed subscriptions and posts
 - **Docker Ready**: Containerized for easy deployment
 
 ## Prerequisites
@@ -102,9 +103,14 @@ Open http://localhost:3000 in your browser.
    - Click "Load Subscriptions" to fetch all subreddits from the source account
    - Select which subreddits you want to transfer
 
-3. **Transfer**:
-   - Click "Start Transfer" to begin the subscription transfer
-   - Monitor progress in real-time with detailed logs
+3. **Optional - Enable Saved Posts**:
+
+   - Check "Also transfer saved posts from source account" to include your saved posts in the transfer
+   - Saved posts will be automatically fetched and transferred along with subscriptions
+
+4. **Transfer**:
+   - Click "Start Transfer" to begin the transfer process
+   - Monitor progress in real-time with detailed logs for both subscriptions and saved posts
 
 ## API Endpoints
 
@@ -113,7 +119,8 @@ Open http://localhost:3000 in your browser.
 - `GET /auth/callback` - OAuth callback handler
 - `GET /api/status` - Check authentication status
 - `GET /api/subscriptions` - Fetch source account subscriptions
-- `POST /api/transfer` - Start subscription transfer
+- `POST /api/saved-posts/export` - Export saved posts from source account
+- `POST /api/transfer` - Start subscription and saved posts transfer
 - `GET /api/transfer/:id` - Check transfer progress
 
 ## Technical Details

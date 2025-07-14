@@ -15,6 +15,18 @@ interface TransferStatus {
   results: TransferResult[];
   startedAt: Date;
   completedAt?: Date;
+  savedPostsTransfer?: {
+    enabled: boolean;
+    total: number;
+    processed: number;
+    successful: number;
+    failed: number;
+    results: Array<{
+      postId: string;
+      success: boolean;
+      error?: string;
+    }>;
+  };
 }
 
 class RateLimiter {
@@ -197,7 +209,8 @@ export function createTransferAPI() {
   function startTransfer(
     transferId: string,
     accessToken: string,
-    subreddits: string[]
+    subreddits: string[],
+    options?: { transferSavedPosts?: boolean; savedPostsData?: any }
   ) {
     const transfer: TransferStatus = {
       id: transferId,
@@ -210,10 +223,21 @@ export function createTransferAPI() {
       startedAt: new Date(),
     };
 
+    if (options?.transferSavedPosts && options?.savedPostsData) {
+      transfer.savedPostsTransfer = {
+        enabled: true,
+        total: options.savedPostsData.posts?.length || 0,
+        processed: 0,
+        successful: 0,
+        failed: 0,
+        results: [],
+      };
+    }
+
     transfers.set(transferId, transfer);
 
     // Start the transfer process asynchronously
-    processTransfer(transferId, accessToken, subreddits).catch((error) => {
+    processTransfer(transferId, accessToken, subreddits, options).catch((error) => {
       console.error(`Transfer ${transferId} failed:`, error);
       transfer.status = "failed";
       transfer.completedAt = new Date();
@@ -225,7 +249,8 @@ export function createTransferAPI() {
   async function processTransfer(
     transferId: string,
     accessToken: string,
-    subreddits: string[]
+    subreddits: string[],
+    options?: { transferSavedPosts?: boolean; savedPostsData?: any }
   ) {
     const transfer = transfers.get(transferId);
     if (!transfer) return;
@@ -264,12 +289,63 @@ export function createTransferAPI() {
       }
     }
 
+    // Process saved posts if enabled
+    if (options?.transferSavedPosts && options?.savedPostsData && transfer.savedPostsTransfer) {
+      console.log(`Transfer ${transferId}: Starting saved posts transfer...`);
+      
+      const { createSavedPostsAPI } = await import('./savedPosts');
+      const savedPostsAPI = createSavedPostsAPI();
+      
+      for (const post of options.savedPostsData.posts) {
+        try {
+          const result = await rateLimiter.add(() =>
+            savedPostsAPI.savePost(accessToken, post.name)
+          );
+
+          transfer.savedPostsTransfer.results.push({
+            postId: post.name,
+            success: result.success,
+            error: result.error,
+          });
+          
+          transfer.savedPostsTransfer.processed++;
+
+          if (result.success) {
+            transfer.savedPostsTransfer.successful++;
+          } else {
+            transfer.savedPostsTransfer.failed++;
+          }
+
+          console.log(
+            `Transfer ${transferId} saved posts: ${transfer.savedPostsTransfer.processed}/${
+              transfer.savedPostsTransfer.total
+            } - ${post.title} ${result.success ? "SAVED" : "FAILED"}`
+          );
+        } catch (error) {
+          console.error(`Transfer ${transferId} saved posts error for ${post.title}:`, error);
+          transfer.savedPostsTransfer.results.push({
+            postId: post.name,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          });
+          transfer.savedPostsTransfer.processed++;
+          transfer.savedPostsTransfer.failed++;
+        }
+      }
+    }
+
     transfer.status = "completed";
     transfer.completedAt = new Date();
 
     console.log(
-      `Transfer ${transferId} completed: ${transfer.successful}/${transfer.total} successful`
+      `Transfer ${transferId} completed: ${transfer.successful}/${transfer.total} subreddits successful`
     );
+    
+    if (transfer.savedPostsTransfer) {
+      console.log(
+        `Transfer ${transferId} saved posts completed: ${transfer.savedPostsTransfer.successful}/${transfer.savedPostsTransfer.total} posts saved`
+      );
+    }
   }
 
   function getTransferStatus(transferId: string): TransferStatus | null {

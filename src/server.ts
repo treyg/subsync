@@ -2,6 +2,7 @@ import type { Session } from './auth/session';
 import { createRedditOAuth } from './auth/reddit-oauth';
 import { createSubscriptionAPI } from './api/subscriptions';
 import { createTransferAPI } from './api/transfer';
+import { createSavedPostsAPI } from './api/savedPosts';
 
 declare global {
   namespace Bun {
@@ -29,6 +30,7 @@ const ctx: AppContext = {
 const redditOAuth = createRedditOAuth();
 const subscriptionAPI = createSubscriptionAPI();
 const transferAPI = createTransferAPI();
+const savedPostsAPI = createSavedPostsAPI();
 
 function addSessionCookie(response: Response, sessionId: string): Response {
   const headers = new Headers(response.headers);
@@ -112,6 +114,12 @@ const server = Bun.serve({
       
       case '/api/status':
         return addSessionCookie(await handleStatus(session), sessionId);
+      
+      case '/api/saved-posts/export':
+        if (req.method === 'POST') {
+          return addSessionCookie(await handleExportSavedPosts(req, session), sessionId);
+        }
+        return new Response('Method Not Allowed', { status: 405 });
       
       default:
         // Handle dynamic transfer status routes
@@ -220,8 +228,12 @@ async function handleTransfer(req: Request, session: Session) {
   }
 
   try {
-    const body = await req.json() as { subreddits: string[] };
-    const { subreddits } = body;
+    const body = await req.json() as { 
+      subreddits: string[];
+      transferSavedPosts?: boolean;
+      savedPostsData?: any;
+    };
+    const { subreddits, transferSavedPosts, savedPostsData } = body;
     
     if (!Array.isArray(subreddits)) {
       return new Response(JSON.stringify({ error: 'Invalid subreddits list' }), {
@@ -231,7 +243,12 @@ async function handleTransfer(req: Request, session: Session) {
     }
 
     const transferId = crypto.randomUUID();
-    transferAPI.startTransfer(transferId, session.targetAccount.accessToken, subreddits);
+    transferAPI.startTransfer(
+      transferId, 
+      session.targetAccount.accessToken, 
+      subreddits, 
+      { transferSavedPosts, savedPostsData }
+    );
     
     return new Response(JSON.stringify({ transferId, status: 'started' }), {
       headers: { 'Content-Type': 'application/json' }
@@ -299,6 +316,37 @@ async function handleTransferStatus(transferId: string) {
   } catch (error) {
     console.error('Transfer status error:', error);
     return new Response(JSON.stringify({ error: 'Failed to get transfer status' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+async function handleExportSavedPosts(req: Request, session: Session) {
+  if (!session.sourceAccount) {
+    return new Response(JSON.stringify({ error: 'Source account not authenticated' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const exportData = await savedPostsAPI.exportSavedPosts(
+      session.sourceAccount.accessToken,
+      session.sourceAccount.username
+    );
+    
+    const filename = `reddit-saved-posts-${session.sourceAccount.username}-${new Date().toISOString().split('T')[0]}.json`;
+    
+    return new Response(JSON.stringify(exportData), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="${filename}"`
+      }
+    });
+  } catch (error) {
+    console.error('Export saved posts error:', error);
+    return new Response(JSON.stringify({ error: 'Failed to export saved posts' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

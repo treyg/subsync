@@ -4,6 +4,7 @@ class RedditTransferApp {
     this.selectedSubscriptions = new Set();
     this.transferId = null;
     this.transferInterval = null;
+    this.savedPostsData = null;
 
     this.initializeElements();
     this.bindEvents();
@@ -35,6 +36,14 @@ class RedditTransferApp {
       transferLog: document.getElementById("transfer-log"),
       searchFilter: document.querySelector(".search-filter"),
       subscriptionSearch: document.getElementById("subscription-search"),
+      transferSavedPosts: document.getElementById("transfer-saved-posts"),
+      savedPostsCount: document.getElementById("saved-posts-count"),
+      savedPostsProgress: document.getElementById("saved-posts-progress"),
+      savedPostsProgressFill: document.getElementById("saved-posts-progress-fill"),
+      savedPostsCurrent: document.getElementById("saved-posts-current"),
+      savedPostsTotal: document.getElementById("saved-posts-total"),
+      savedPostsSuccessful: document.getElementById("saved-posts-successful"),
+      savedPostsFailed: document.getElementById("saved-posts-failed"),
     };
   }
 
@@ -238,12 +247,36 @@ class RedditTransferApp {
     if (this.selectedSubscriptions.size === 0) return;
 
     const subreddits = Array.from(this.selectedSubscriptions);
+    const transferSavedPosts = this.elements.transferSavedPosts.checked;
+    let savedPostsData = null;
+
+    // If transferring saved posts, fetch them first
+    if (transferSavedPosts) {
+      try {
+        const savedPostsResponse = await fetch("/api/saved-posts/export", {
+          method: "POST",
+        });
+        
+        if (savedPostsResponse.ok) {
+          savedPostsData = await savedPostsResponse.json();
+          this.elements.savedPostsCount.textContent = `(${savedPostsData.posts?.length || 0} posts)`;
+        } else {
+          console.warn("Failed to fetch saved posts, continuing without them");
+        }
+      } catch (error) {
+        console.warn("Error fetching saved posts:", error);
+      }
+    }
 
     try {
       const response = await fetch("/api/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subreddits }),
+        body: JSON.stringify({ 
+          subreddits,
+          transferSavedPosts,
+          savedPostsData
+        }),
       });
 
       if (!response.ok) {
@@ -331,6 +364,11 @@ class RedditTransferApp {
     const skipped = status.results.filter((r) => r.alreadySubscribed).length;
     this.elements.statSkipped.textContent = skipped;
 
+    // Update saved posts progress if available
+    if (status.savedPostsTransfer) {
+      this.updateSavedPostsProgress(status.savedPostsTransfer);
+    }
+
     // Add new log entries
     const logEntries = this.elements.transferLog.children.length;
     for (let i = logEntries - 1; i < status.results.length; i++) {
@@ -389,6 +427,22 @@ class RedditTransferApp {
       return (num / 1000).toFixed(1) + "k";
     }
     return num.toString();
+  }
+
+
+  updateSavedPostsProgress(savedPostsTransfer) {
+    if (!savedPostsTransfer) return;
+
+    const progress = savedPostsTransfer.total > 0 
+      ? (savedPostsTransfer.processed / savedPostsTransfer.total) * 100 
+      : 0;
+
+    this.elements.savedPostsProgress.style.display = "block";
+    this.elements.savedPostsProgressFill.style.width = `${progress}%`;
+    this.elements.savedPostsCurrent.textContent = savedPostsTransfer.processed;
+    this.elements.savedPostsTotal.textContent = savedPostsTransfer.total;
+    this.elements.savedPostsSuccessful.textContent = savedPostsTransfer.successful;
+    this.elements.savedPostsFailed.textContent = savedPostsTransfer.failed;
   }
 }
 

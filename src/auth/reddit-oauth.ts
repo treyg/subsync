@@ -27,7 +27,7 @@ export function createRedditOAuth() {
       state,
       redirect_uri: redirectUri,
       duration: "permanent",
-      scope: "mysubreddits subscribe identity",
+      scope: "mysubreddits subscribe identity history save",
     });
 
     return {

@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reddit Subscription Transfer</title>
+    <title>SubSync - Reddit Subscription & Saved Posts Transfer</title>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
     <div class="container">
       <header>
-        <h1>SubSync - Reddit Subscription Transfer</h1>
-        <p>Transfer your subreddit subscriptions between Reddit accounts</p>
+        <h1>SubSync - Reddit Subscription & Saved Posts Transfer</h1>
+        <p>Transfer your subreddit subscriptions and saved posts between Reddit accounts</p>
       </header>
 
       <main>
@@ -85,6 +85,19 @@
 
           <div id="subscriptions-list" class="subscriptions-list"></div>
 
+          <div class="saved-posts-section">
+            <h3>Saved Posts Transfer</h3>
+            <div class="saved-posts-controls">
+              <label class="checkbox-wrapper">
+                <input type="checkbox" id="transfer-saved-posts" />
+                <span class="checkmark"></span>
+                Also transfer saved posts from source account
+                <span id="saved-posts-count" class="count"></span>
+              </label>
+              <p class="saved-posts-note">Saved posts will be automatically fetched from your source account and transferred to your target account.</p>
+            </div>
+          </div>
+
           <div class="transfer-controls">
             <div class="transfer-actions">
               <button id="clear-all-target" class="btn btn-warning">
@@ -126,6 +139,29 @@
             <div class="stat">
               <span class="stat-number" id="stat-skipped">0</span>
               <span class="stat-label">Already Subscribed</span>
+            </div>
+          </div>
+
+          <div id="saved-posts-progress" class="saved-posts-progress" style="display: none;">
+            <h3>Saved Posts Progress</h3>
+            <div class="progress-container">
+              <div class="progress-bar">
+                <div id="saved-posts-progress-fill" class="progress-fill"></div>
+              </div>
+              <div class="progress-text">
+                <span id="saved-posts-current">0</span> /
+                <span id="saved-posts-total">0</span>
+              </div>
+            </div>
+            <div class="transfer-stats">
+              <div class="stat">
+                <span class="stat-number" id="saved-posts-successful">0</span>
+                <span class="stat-label">Saved</span>
+              </div>
+              <div class="stat">
+                <span class="stat-number" id="saved-posts-failed">0</span>
+                <span class="stat-label">Failed</span>
+              </div>
             </div>
           </div>
 
