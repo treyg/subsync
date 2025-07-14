@@ -307,7 +307,7 @@ async function handleTransfer(req: Request, session: Session) {
 
     // Get or create the global transfer API instance
     if (!globalTransferAPI) {
-      const { createMultiPlatformTransferAPI } = await import('./api/transfer-new');
+      const { createMultiPlatformTransferAPI } = await import('./api/transfer');
       globalTransferAPI = createMultiPlatformTransferAPI();
     }
 
@@ -362,7 +362,7 @@ async function handleClearAll(req: Request, session: Session) {
   }
 
   try {
-    const { createMultiPlatformTransferAPI } = await import('./api/transfer-new');
+    const { createMultiPlatformTransferAPI } = await import('./api/transfer');
     const transferAPI = createMultiPlatformTransferAPI();
     const transferId = await transferAPI.clearAllSubscriptions(session.accounts.target);
     
@@ -382,7 +382,7 @@ async function handleTransferStatus(transferId: string) {
   try {
     // Use the global transfer API instance
     if (!globalTransferAPI) {
-      const { createMultiPlatformTransferAPI } = await import('./api/transfer-new');
+      const { createMultiPlatformTransferAPI } = await import('./api/transfer');
       globalTransferAPI = createMultiPlatformTransferAPI();
     }
     
