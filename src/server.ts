@@ -1,15 +1,21 @@
-import type { Session } from './auth/session';
-import { createRedditOAuth } from './auth/reddit-oauth';
-import { createSubscriptionAPI } from './api/subscriptions';
-import { createTransferAPI } from './api/transfer';
-import { createSavedPostsAPI } from './api/savedPosts';
+import type { Session, Account, RedditAccount } from './auth/session';
+import { accountToRedditAccount, redditAccountToAccount } from './auth/session';
+import type { PlatformType } from './platforms/types';
+import { initializePlatforms, createPlatformProvider } from './platforms/factory';
+import { getEnabledPlatforms, isPlatformEnabled } from './config/platforms';
+
+// Global transfer API instance
+let globalTransferAPI: any = null;
 
 declare global {
   namespace Bun {
     interface Env {
-      REDDIT_CLIENT_ID: string;
-      REDDIT_CLIENT_SECRET: string;
-      REDDIT_REDIRECT_URI: string;
+      REDDIT_CLIENT_ID?: string;
+      REDDIT_CLIENT_SECRET?: string;
+      REDDIT_REDIRECT_URI?: string;
+      YOUTUBE_CLIENT_ID?: string;
+      YOUTUBE_CLIENT_SECRET?: string;
+      YOUTUBE_REDIRECT_URI?: string;
       PORT?: string;
       SESSION_SECRET: string;
       NODE_ENV?: string;
@@ -19,7 +25,11 @@ declare global {
 
 interface AppContext {
   sessions: Map<string, Session>;
-  pendingOAuth: Map<string, { accountType: 'source' | 'target'; sessionId: string }>;
+  pendingOAuth: Map<string, { 
+    accountType: 'source' | 'target'; 
+    sessionId: string; 
+    platform: PlatformType;
+  }>;
 }
 
 const ctx: AppContext = {
@@ -27,10 +37,8 @@ const ctx: AppContext = {
   pendingOAuth: new Map()
 };
 
-const redditOAuth = createRedditOAuth();
-const subscriptionAPI = createSubscriptionAPI();
-const transferAPI = createTransferAPI();
-const savedPostsAPI = createSavedPostsAPI();
+// Initialize platforms
+await initializePlatforms();
 
 function addSessionCookie(response: Response, sessionId: string): Response {
   const headers = new Headers(response.headers);
@@ -40,6 +48,16 @@ function addSessionCookie(response: Response, sessionId: string): Response {
     statusText: response.statusText,
     headers
   });
+}
+
+function createLegacySession(session: Session): any {
+  // Convert new session format to legacy format for backward compatibility
+  return {
+    id: session.id,
+    sourceAccount: accountToRedditAccount(session.accounts.source),
+    targetAccount: accountToRedditAccount(session.accounts.target),
+    createdAt: session.createdAt,
+  };
 }
 
 const server = Bun.serve({
@@ -68,8 +86,14 @@ const server = Bun.serve({
       isNewSession = true;
       ctx.sessions.set(sessionId, {
         id: sessionId,
-        sourceAccount: null,
-        targetAccount: null,
+        accounts: {
+          source: null,
+          target: null,
+        },
+        selectedPlatforms: {
+          source: null,
+          target: null,
+        },
         createdAt: new Date()
       });
     }
@@ -79,8 +103,14 @@ const server = Bun.serve({
       // Recreate session if it doesn't exist
       session = {
         id: sessionId,
-        sourceAccount: null,
-        targetAccount: null,
+        accounts: {
+          source: null,
+          target: null,
+        },
+        selectedPlatforms: {
+          source: null,
+          target: null,
+        },
         createdAt: new Date()
       };
       ctx.sessions.set(sessionId, session);
@@ -96,6 +126,9 @@ const server = Bun.serve({
       
       case '/auth/callback':
         return await handleCallback(req, session, ctx);
+      
+      case '/api/platforms':
+        return addSessionCookie(await handleGetPlatforms(), sessionId);
       
       case '/api/subscriptions':
         return addSessionCookie(await handleGetSubscriptions(req, session), sessionId);
@@ -143,18 +176,42 @@ async function handleHome(session: Session) {
   });
 }
 
+async function handleGetPlatforms() {
+  const enabledPlatforms = getEnabledPlatforms();
+  return new Response(JSON.stringify({
+    platforms: enabledPlatforms.map(platform => ({
+      id: platform,
+      name: platform.charAt(0).toUpperCase() + platform.slice(1),
+      enabled: true
+    }))
+  }), {
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
+
 async function handleLogin(req: Request, session: Session, ctx: AppContext) {
   const url = new URL(req.url);
   const accountType = url.searchParams.get('type') as 'source' | 'target';
+  const platform = url.searchParams.get('platform') as PlatformType;
   
   if (!accountType || !['source', 'target'].includes(accountType)) {
     return new Response('Invalid account type', { status: 400 });
   }
 
-  const { authUrl, state } = redditOAuth.getAuthUrl();
-  ctx.pendingOAuth.set(state, { accountType, sessionId: session.id });
-  
-  return Response.redirect(authUrl);
+  if (!platform || !isPlatformEnabled(platform)) {
+    return new Response('Invalid or disabled platform', { status: 400 });
+  }
+
+  try {
+    const provider = createPlatformProvider(platform);
+    const { authUrl, state } = provider.getAuthUrl();
+    ctx.pendingOAuth.set(state, { accountType, sessionId: session.id, platform });
+    
+    return Response.redirect(authUrl);
+  } catch (error) {
+    console.error('Login error:', error);
+    return new Response('Platform configuration error', { status: 500 });
+  }
 }
 
 async function handleCallback(req: Request, session: Session, ctx: AppContext) {
@@ -172,20 +229,25 @@ async function handleCallback(req: Request, session: Session, ctx: AppContext) {
   }
 
   try {
-    const tokens = await redditOAuth.exchangeCodeForTokens(code);
-    const userInfo = await redditOAuth.getUserInfo(tokens.access_token);
+    const provider = createPlatformProvider(pending.platform);
+    const tokens = await provider.exchangeCodeForTokens(code);
+    const userInfo = await provider.getUserInfo(tokens.access_token);
     
-    const account = {
-      username: userInfo.name,
+    const account: Account = {
+      username: userInfo.username,
+      displayName: userInfo.displayName,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
-      expiresAt: new Date(Date.now() + tokens.expires_in * 1000)
+      expiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+      platform: pending.platform
     };
 
     if (pending.accountType === 'source') {
-      session.sourceAccount = account;
+      session.accounts.source = account;
+      session.selectedPlatforms.source = pending.platform;
     } else {
-      session.targetAccount = account;
+      session.accounts.target = account;
+      session.selectedPlatforms.target = pending.platform;
     }
 
     ctx.pendingOAuth.delete(state);
@@ -198,7 +260,7 @@ async function handleCallback(req: Request, session: Session, ctx: AppContext) {
 }
 
 async function handleGetSubscriptions(req: Request, session: Session) {
-  if (!session.sourceAccount) {
+  if (!session.accounts.source) {
     return new Response(JSON.stringify({ error: 'Source account not authenticated' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -206,7 +268,8 @@ async function handleGetSubscriptions(req: Request, session: Session) {
   }
 
   try {
-    const subscriptions = await subscriptionAPI.getSubscriptions(session.sourceAccount.accessToken);
+    const provider = createPlatformProvider(session.accounts.source.platform);
+    const subscriptions = await provider.getSubscriptions(session.accounts.source.accessToken);
     return new Response(JSON.stringify(subscriptions), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -220,7 +283,7 @@ async function handleGetSubscriptions(req: Request, session: Session) {
 }
 
 async function handleTransfer(req: Request, session: Session) {
-  if (!session.sourceAccount || !session.targetAccount) {
+  if (!session.accounts.source || !session.accounts.target) {
     return new Response(JSON.stringify({ error: 'Both accounts must be authenticated' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -229,24 +292,31 @@ async function handleTransfer(req: Request, session: Session) {
 
   try {
     const body = await req.json() as { 
-      subreddits: string[];
+      subscriptions: string[];
       transferSavedPosts?: boolean;
       savedPostsData?: any;
     };
-    const { subreddits, transferSavedPosts, savedPostsData } = body;
+    const { subscriptions, transferSavedPosts, savedPostsData } = body;
     
-    if (!Array.isArray(subreddits)) {
-      return new Response(JSON.stringify({ error: 'Invalid subreddits list' }), {
+    if (!Array.isArray(subscriptions)) {
+      return new Response(JSON.stringify({ error: 'Invalid subscriptions list' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
 
+    // Get or create the global transfer API instance
+    if (!globalTransferAPI) {
+      const { createMultiPlatformTransferAPI } = await import('./api/transfer-new');
+      globalTransferAPI = createMultiPlatformTransferAPI();
+    }
+
     const transferId = crypto.randomUUID();
-    transferAPI.startTransfer(
-      transferId, 
-      session.targetAccount.accessToken, 
-      subreddits, 
+    globalTransferAPI.startTransfer(
+      transferId,
+      session.accounts.source,
+      session.accounts.target,
+      subscriptions,
       { transferSavedPosts, savedPostsData }
     );
     
@@ -264,21 +334,27 @@ async function handleTransfer(req: Request, session: Session) {
 
 async function handleStatus(session: Session) {
   return new Response(JSON.stringify({
-    sourceAccount: session.sourceAccount ? {
-      username: session.sourceAccount.username,
+    sourceAccount: session.accounts.source ? {
+      username: session.accounts.source.username,
+      displayName: session.accounts.source.displayName,
+      platform: session.accounts.source.platform,
       authenticated: true
     } : null,
-    targetAccount: session.targetAccount ? {
-      username: session.targetAccount.username,
+    targetAccount: session.accounts.target ? {
+      username: session.accounts.target.username,
+      displayName: session.accounts.target.displayName,
+      platform: session.accounts.target.platform,
       authenticated: true
-    } : null
+    } : null,
+    selectedPlatforms: session.selectedPlatforms,
+    enabledPlatforms: getEnabledPlatforms()
   }), {
     headers: { 'Content-Type': 'application/json' }
   });
 }
 
 async function handleClearAll(req: Request, session: Session) {
-  if (!session.targetAccount) {
+  if (!session.accounts.target) {
     return new Response(JSON.stringify({ error: 'Target account not authenticated' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -286,7 +362,9 @@ async function handleClearAll(req: Request, session: Session) {
   }
 
   try {
-    const transferId = await transferAPI.clearAllSubscriptions(session.targetAccount.accessToken);
+    const { createMultiPlatformTransferAPI } = await import('./api/transfer-new');
+    const transferAPI = createMultiPlatformTransferAPI();
+    const transferId = await transferAPI.clearAllSubscriptions(session.accounts.target);
     
     return new Response(JSON.stringify({ transferId, status: 'started' }), {
       headers: { 'Content-Type': 'application/json' }
@@ -302,7 +380,13 @@ async function handleClearAll(req: Request, session: Session) {
 
 async function handleTransferStatus(transferId: string) {
   try {
-    const status = transferAPI.getTransferStatus(transferId);
+    // Use the global transfer API instance
+    if (!globalTransferAPI) {
+      const { createMultiPlatformTransferAPI } = await import('./api/transfer-new');
+      globalTransferAPI = createMultiPlatformTransferAPI();
+    }
+    
+    const status = globalTransferAPI.getTransferStatus(transferId);
     if (!status) {
       return new Response(JSON.stringify({ error: 'Transfer not found' }), {
         status: 404,
@@ -323,7 +407,7 @@ async function handleTransferStatus(transferId: string) {
 }
 
 async function handleExportSavedPosts(req: Request, session: Session) {
-  if (!session.sourceAccount) {
+  if (!session.accounts.source) {
     return new Response(JSON.stringify({ error: 'Source account not authenticated' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
@@ -331,12 +415,29 @@ async function handleExportSavedPosts(req: Request, session: Session) {
   }
 
   try {
-    const exportData = await savedPostsAPI.exportSavedPosts(
-      session.sourceAccount.accessToken,
-      session.sourceAccount.username
+    const provider = createPlatformProvider(session.accounts.source.platform);
+    
+    if (!provider.getContent) {
+      return new Response(JSON.stringify({ error: 'Content export not supported for this platform' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const content = await provider.getContent(
+      session.accounts.source.accessToken,
+      session.accounts.source.username
     );
     
-    const filename = `reddit-saved-posts-${session.sourceAccount.username}-${new Date().toISOString().split('T')[0]}.json`;
+    const exportData = {
+      version: "2.0",
+      platform: session.accounts.source.platform,
+      exportedAt: new Date().toISOString(),
+      username: session.accounts.source.username,
+      content: content
+    };
+    
+    const filename = `${session.accounts.source.platform}-content-${session.accounts.source.username}-${new Date().toISOString().split('T')[0]}.json`;
     
     return new Response(JSON.stringify(exportData), {
       headers: {
@@ -345,8 +446,8 @@ async function handleExportSavedPosts(req: Request, session: Session) {
       }
     });
   } catch (error) {
-    console.error('Export saved posts error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to export saved posts' }), {
+    console.error('Export content error:', error);
+    return new Response(JSON.stringify({ error: 'Failed to export content' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -354,3 +455,4 @@ async function handleExportSavedPosts(req: Request, session: Session) {
 }
 
 console.log(`Server running on http://localhost:${server.port}`);
+console.log(`Enabled platforms: ${getEnabledPlatforms().join(', ')}`);
