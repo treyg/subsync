@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SubSync - Reddit Subscription & Saved Posts Transfer</title>
+    <title>SubSync - Multi-Platform Subscription Transfer</title>
     <link rel="stylesheet" href="/static/style.css" />
   </head>
   <body>
     <div class="container">
       <header>
-        <h1>SubSync - Reddit Subscription & Saved Posts Transfer</h1>
-        <p>Transfer your subreddit subscriptions and saved posts between Reddit accounts</p>
+        <h1>SubSync - Multi-Platform Subscription Transfer</h1>
+        <p>Transfer your subscriptions and content between Reddit and YouTube accounts</p>
       </header>
 
       <main>
@@ -18,11 +18,19 @@
           <div class="account-card">
             <h2>Source Account</h2>
             <p>The account to copy subscriptions from</p>
+            
+            <div class="platform-selection">
+              <label for="source-platform">Platform:</label>
+              <select id="source-platform" class="platform-select">
+                <option value="">Select Platform</option>
+              </select>
+            </div>
+            
             <div id="source-status" class="account-status">
               <span class="status-indicator disconnected"></span>
               <span class="status-text">Not connected</span>
             </div>
-            <button id="connect-source" class="btn btn-primary">
+            <button id="connect-source" class="btn btn-primary" disabled>
               Connect Source Account
             </button>
           </div>
@@ -43,13 +51,31 @@
           <div class="account-card">
             <h2>Target Account</h2>
             <p>The account to copy subscriptions to</p>
+            
+            <div class="platform-selection">
+              <label for="target-platform">Platform:</label>
+              <select id="target-platform" class="platform-select">
+                <option value="">Select Platform</option>
+              </select>
+            </div>
+            
             <div id="target-status" class="account-status">
               <span class="status-indicator disconnected"></span>
               <span class="status-text">Not connected</span>
             </div>
-            <button id="connect-target" class="btn btn-primary">
+            <button id="connect-target" class="btn btn-primary" disabled>
               Connect Target Account
             </button>
+          </div>
+        </div>
+
+        <div
+          id="platform-compatibility"
+          class="platform-compatibility"
+          style="display: none"
+        >
+          <div class="compatibility-info">
+            <span id="compatibility-message"></span>
           </div>
         </div>
 
@@ -58,7 +84,7 @@
           class="subscriptions-section"
           style="display: none"
         >
-          <h2>Subscriptions</h2>
+          <h2 id="subscriptions-title">Subscriptions</h2>
           <div class="subscription-controls">
             <button id="load-subscriptions" class="btn btn-secondary">
               Load Subscriptions
@@ -78,7 +104,7 @@
             <input 
               type="text" 
               id="subscription-search" 
-              placeholder="Search subreddits..." 
+              placeholder="Search..." 
               class="search-input"
             />
           </div>
@@ -86,15 +112,17 @@
           <div id="subscriptions-list" class="subscriptions-list"></div>
 
           <div class="saved-posts-section">
-            <h3>Saved Posts Transfer</h3>
+            <h3 id="content-transfer-title">Content Transfer</h3>
             <div class="saved-posts-controls">
               <label class="checkbox-wrapper">
                 <input type="checkbox" id="transfer-saved-posts" />
                 <span class="checkmark"></span>
-                Also transfer saved posts from source account
+                <span id="content-transfer-label">Also transfer saved content from source account</span>
                 <span id="saved-posts-count" class="count"></span>
               </label>
-              <p class="saved-posts-note">Saved posts will be automatically fetched from your source account and transferred to your target account.</p>
+              <p id="content-transfer-note" class="saved-posts-note">
+                Saved content will be automatically fetched from your source account and transferred to your target account.
+              </p>
             </div>
           </div>
 
@@ -138,12 +166,12 @@
             </div>
             <div class="stat">
               <span class="stat-number" id="stat-skipped">0</span>
-              <span class="stat-label">Already Subscribed</span>
+              <span class="stat-label">Already Exists</span>
             </div>
           </div>
 
           <div id="saved-posts-progress" class="saved-posts-progress" style="display: none;">
-            <h3>Saved Posts Progress</h3>
+            <h3>Content Transfer Progress</h3>
             <div class="progress-container">
               <div class="progress-bar">
                 <div id="saved-posts-progress-fill" class="progress-fill"></div>
@@ -156,7 +184,7 @@
             <div class="transfer-stats">
               <div class="stat">
                 <span class="stat-number" id="saved-posts-successful">0</span>
-                <span class="stat-label">Saved</span>
+                <span class="stat-label">Transferred</span>
               </div>
               <div class="stat">
                 <span class="stat-number" id="saved-posts-failed">0</span>
