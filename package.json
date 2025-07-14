@@ -1,7 +1,7 @@
 {
   "name": "subsync",
-  "version": "1.0.0",
-  "description": "Transfer Reddit subscriptions between accounts",
+  "version": "2.0.0",
+  "description": "Transfer subscriptions and content between Reddit and YouTube accounts",
   "main": "src/server.ts",
   "type": "module",
   "private": true,
@@ -9,8 +9,10 @@
     "dev": "bun run --watch src/server.ts",
     "start": "bun run src/server.ts",
     "build": "bun build src/server.ts --outdir ./dist --target bun",
-    "docker:build": "docker build -t reddit-transfer-app .",
-    "docker:run": "docker run -p 3000:3000 --env-file .env reddit-transfer-app"
+    "docker:build": "docker build -t subsync-app .",
+    "docker:run": "docker run -p 3000:3000 --env-file .env subsync-app",
+    "dev:legacy": "bun run --watch src/server-legacy.ts",
+    "start:legacy": "bun run src/server-legacy.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
@@ -20,8 +22,10 @@
   },
   "keywords": [
     "reddit",
+    "youtube",
     "subscription",
     "transfer",
+    "multiplatform",
     "bun",
     "docker"
   ],
