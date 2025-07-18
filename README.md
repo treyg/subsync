@@ -6,10 +6,10 @@
 
 ## Features
 
-- **Multi-Platform Support**: Transfer Reddit subscriptions and saved posts, or YouTube subscriptions and playlists
+- **Multi-Platform Support**: Transfer Reddit subscriptions and saved posts, or YouTube subscriptions
 - **Dual OAuth Authentication**: Securely connect two accounts on the same platform
 - **Subscription Management**: View and select subscriptions from source account
-- **Content Transfer**: Transfer saved posts (Reddit) or playlists (YouTube) between accounts
+- **Content Transfer**: Transfer saved posts (Reddit only - YouTube playlists WIP)
 - **Rate-Limited Transfers**: Respects API limits for both platforms
 - **Real-time Progress**: Live transfer progress with detailed logging
 - **Error Handling**: Robust error handling for failed transfers
@@ -155,7 +155,6 @@ Open http://localhost:3000 in your browser.
 4. **Optional - Enable Content Transfer**:
 
    - For Reddit: Check "Also transfer saved posts from source account"
-   - For YouTube: Check "Also transfer playlists from source account"
 
 5. **Transfer**:
    - Click "Start Transfer" to begin the process
@@ -191,7 +190,7 @@ Open http://localhost:3000 in your browser.
 
 ## YouTube API Limitations
 
-**Important**: YouTube's free API has quota restrictions that limit transfer quantity per day:
+**Important**: YouTube playlist transfer has been disabled due to API quota restrictions and rate limiting issues.
 
 ### Quota Structure
 
@@ -200,7 +199,8 @@ YouTube Data API v3 uses a quota system where each operation consumes "units":
 - **Daily limit**: 10,000 units per project (cannot be increased for personal use)
 - **Reading subscriptions**: ~1 unit per 50 subscriptions
 - **Creating subscriptions**: 50 units per subscription
-- **Creating playlists**: 50 units per playlist
+- **Creating playlists**: 50 units per playlist (disabled)
+- **Adding videos to playlists**: 50 units per video (disabled)
 
 ### Example
 
@@ -222,7 +222,7 @@ This limitation is imposed by Google/YouTube and affects all third-party applica
 
 1. **OAuth Errors**: Verify your app settings and redirect URI in Reddit or Google Cloud Console
 2. **Private Content**: Some content may fail if the target account doesn't have access
-3. **YouTube API Quota**: Large transfers may hit daily quota limits (see [YouTube API Limitations](#youtube-api-limitations))
+3. **YouTube API Quota**: Large subscription transfers may hit daily quota limits (see [YouTube API Limitations](#youtube-api-limitations))
 4. **Transfer Speed**: YouTube transfers are slower due to API rate limits
 
 ### Logs
