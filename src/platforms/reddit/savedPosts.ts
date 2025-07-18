@@ -102,12 +102,45 @@ export function createRedditSavedPosts() {
         const errorText = await response.text();
         console.error(`Reddit save post error for ${postName}:`, response.status, errorText);
         
-        if (response.status === 403) {
+        if (response.status === 400) {
+          // Parse the error response to get more details
+          let errorDetails = errorText;
+          try {
+            const errorData = JSON.parse(errorText);
+            errorDetails = errorData.message || errorData.error || errorText;
+          } catch {
+            // If parsing fails, use the raw error text
+          }
+          
+          // Check for specific 400 error cases
+          if (errorDetails.includes('already_saved') || errorDetails.includes('ALREADY_SAVED')) {
+            return {
+              targetId: postName,
+              targetName: postName,
+              success: true,
+              alreadyExists: true,
+            };
+          } else if (errorDetails.includes('invalid') || errorDetails.includes('INVALID')) {
+            return {
+              targetId: postName,
+              targetName: postName,
+              success: false,
+              error: "Invalid post ID or post no longer exists",
+            };
+          } else {
+            return {
+              targetId: postName,
+              targetName: postName,
+              success: false,
+              error: `Bad request: ${errorDetails}`,
+            };
+          }
+        } else if (response.status === 403) {
           return {
             targetId: postName,
             targetName: postName,
             success: false,
-            error: "Access denied - unable to save post",
+            error: "Access denied - unable to save post (may be private or restricted)",
           };
         } else if (response.status === 404) {
           return {
@@ -116,20 +149,25 @@ export function createRedditSavedPosts() {
             success: false,
             error: "Post not found or deleted",
           };
-        }
-        
-        if (response.status === 200) {
+        } else if (response.status === 401) {
           return {
             targetId: postName,
             targetName: postName,
-            success: true,
-            alreadyExists: true,
+            success: false,
+            error: "Authentication expired - please reconnect your account",
           };
         }
         
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        // Generic error for other status codes
+        return {
+          targetId: postName,
+          targetName: postName,
+          success: false,
+          error: `HTTP ${response.status}: ${errorText}`,
+        };
       }
 
+      // Success case
       return {
         targetId: postName,
         targetName: postName,
