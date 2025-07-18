@@ -216,7 +216,7 @@ export function createMultiPlatformTransferAPI() {
           for (const content of options.savedPostsData.content) {
             try {
               const result = await rateLimiter.add(() =>
-                targetProvider.saveContent!(targetAccount.accessToken, content.name)
+                targetProvider.saveContent!(targetAccount.accessToken, content.id)
               );
 
               transfer.savedPostsTransfer.results.push({
