@@ -2,7 +2,7 @@
 
 <p style="margin-bottom:2rem;">A lightweight Docker application built with Bun that transfers subscriptions and content between Reddit and YouTube accounts.</p>
 
-![SubSync Interface Screenshot](images/screenshot.jpg)
+![SubSync Interface Screenshot](images/screenshot.jpeg)
 
 ## Features
 
