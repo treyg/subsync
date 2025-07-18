@@ -211,6 +211,7 @@ Say you have 200 YouTube subscrptions:
 ### Practical Limitations
 
 - **Small transfers only**: Limited to ~190 subscriptions per day
+- **Batch Selection Available**: To help manage large subscription lists, the app includes batch selection controls that let you select subscriptions in increments of 50 or 100 for more controlled transfers
 
 This limitation is imposed by Google/YouTube and affects all third-party applications using their API.
 

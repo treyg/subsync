@@ -63,6 +63,11 @@ class MultiPlatformTransferApp {
       contentTransferLabel: document.getElementById("content-transfer-label"),
       contentTransferNote: document.getElementById("content-transfer-note"),
 
+      // Batch selection
+      batchSelectionControls: document.getElementById("batch-selection-controls"),
+      batchSize: document.getElementById("batch-size"),
+      batchButtons: document.getElementById("batch-buttons"),
+
       // Content transfer progress
       savedPostsProgress: document.getElementById("saved-posts-progress"),
       savedPostsProgressFill: document.getElementById(
@@ -106,6 +111,11 @@ class MultiPlatformTransferApp {
     );
     this.elements.subscriptionSearch.addEventListener("input", (e) =>
       this.filterSubscriptions(e.target.value)
+    );
+
+    // Batch selection
+    this.elements.batchSize.addEventListener("change", () =>
+      this.updateBatchButtons()
     );
   }
 
@@ -230,11 +240,18 @@ class MultiPlatformTransferApp {
       } else if (sourcePlatform === "youtube") {
         this.elements.contentTransferTitle.textContent = "Content Transfer";
         this.elements.contentTransferLabel.textContent =
-          "Content/Playlist transfer not yet supported for YouTube";
+          "Content transfer not supported for YouTube";
         this.elements.contentTransferNote.textContent =
-          "Only subscription transfers are available for YouTube for now.";
+          "Only subscription transfers are available for YouTube.";
         this.elements.transferSavedPosts.disabled = true;
         this.elements.transferSavedPosts.checked = false;
+      }
+
+      // Show/hide batch selection controls based on platform
+      if (sourcePlatform === "youtube") {
+        this.elements.batchSelectionControls.style.display = "block";
+      } else {
+        this.elements.batchSelectionControls.style.display = "none";
       }
     }
   }
@@ -357,6 +374,7 @@ class MultiPlatformTransferApp {
       this.subscriptions = await response.json();
       this.renderSubscriptions();
       this.elements.searchFilter.style.display = "block";
+      this.updateBatchButtons();
     } catch (error) {
       console.error("Failed to load subscriptions:", error);
 
@@ -505,12 +523,21 @@ class MultiPlatformTransferApp {
     });
     this.updateCheckboxes();
     this.updateSelectionCount();
+    this.clearBatchButtonSelection();
   }
 
   selectNone() {
     this.selectedSubscriptions.clear();
     this.updateCheckboxes();
     this.updateSelectionCount();
+    this.clearBatchButtonSelection();
+  }
+
+  clearBatchButtonSelection() {
+    const buttons = this.elements.batchButtons.querySelectorAll('.batch-btn');
+    buttons.forEach(button => {
+      button.classList.remove('selected');
+    });
   }
 
   updateCheckboxes() {
@@ -821,6 +848,71 @@ class MultiPlatformTransferApp {
         quotaStat.textContent = quotaErrors;
       }
     }
+  }
+
+  updateBatchButtons() {
+    if (!this.subscriptions || this.subscriptions.length === 0) {
+      this.elements.batchButtons.innerHTML = "";
+      return;
+    }
+
+    const batchSize = parseInt(this.elements.batchSize.value);
+    const totalSubscriptions = this.subscriptions.length;
+    const numBatches = Math.ceil(totalSubscriptions / batchSize);
+
+    this.elements.batchButtons.innerHTML = "";
+
+    for (let i = 0; i < numBatches; i++) {
+      const startIndex = i * batchSize;
+      const endIndex = Math.min(startIndex + batchSize, totalSubscriptions);
+      const count = endIndex - startIndex;
+
+      const button = document.createElement("button");
+      button.className = "batch-btn";
+      button.textContent = `${startIndex + 1}-${endIndex} (${count})`;
+      button.dataset.batchIndex = i;
+      button.addEventListener("click", () => this.selectBatch(i));
+      
+      this.elements.batchButtons.appendChild(button);
+    }
+
+    // Add info text
+    const infoText = document.createElement("div");
+    infoText.className = "batch-info";
+    infoText.textContent = `Total: ${totalSubscriptions} subscriptions`;
+    infoText.style.marginTop = "0.5rem";
+    infoText.style.fontSize = "0.85rem";
+    infoText.style.color = "#6c757d";
+    this.elements.batchButtons.appendChild(infoText);
+  }
+
+  selectBatch(batchIndex) {
+    const batchSize = parseInt(this.elements.batchSize.value);
+    const startIndex = batchIndex * batchSize;
+    const endIndex = Math.min(startIndex + batchSize, this.subscriptions.length);
+
+    // Clear current selection
+    this.selectedSubscriptions.clear();
+
+    // Select batch
+    for (let i = startIndex; i < endIndex; i++) {
+      this.selectedSubscriptions.add(this.subscriptions[i].id);
+    }
+
+    this.updateCheckboxes();
+    this.updateSelectionCount();
+    this.updateBatchButtonStyles(batchIndex);
+  }
+
+  updateBatchButtonStyles(selectedBatchIndex) {
+    const buttons = this.elements.batchButtons.querySelectorAll('.batch-btn');
+    buttons.forEach((button, index) => {
+      if (index === selectedBatchIndex) {
+        button.classList.add('selected');
+      } else {
+        button.classList.remove('selected');
+      }
+    });
   }
 }
 

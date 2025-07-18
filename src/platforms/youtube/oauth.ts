@@ -81,11 +81,11 @@ export function createYouTubeOAuth() {
     }
 
     const tokens = (await response.json()) as GoogleTokenResponse;
-    console.log('YouTube token exchange successful, received:', {
-      has_access_token: !!tokens.access_token,
-      token_type: tokens.token_type,
-      expires_in: tokens.expires_in
-    });
+    // console.log('YouTube token exchange successful, received:', {
+    //   has_access_token: !!tokens.access_token,
+    //   token_type: tokens.token_type,
+    //   expires_in: tokens.expires_in
+    // });
     
     return tokens;
   }

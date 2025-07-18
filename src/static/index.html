@@ -95,6 +95,22 @@
             </div>
           </div>
 
+          <div id="batch-selection-controls" class="batch-selection-controls" style="display: none;">
+            <h3>Quick Batch Selection</h3>
+            <div class="batch-options">
+              <div class="batch-size-selector">
+                <label for="batch-size">Batch Size:</label>
+                <select id="batch-size" class="batch-size-select">
+                  <option value="50">50 subscriptions</option>
+                  <option value="100" selected>100 subscriptions</option>
+                </select>
+              </div>
+              <div id="batch-buttons" class="batch-buttons">
+                <!-- Batch buttons will be generated dynamically -->
+              </div>
+            </div>
+          </div>
+
           <div id="subscriptions-loading" class="loading" style="display: none">
             <div class="spinner"></div>
             <span>Loading subscriptions...</span>
