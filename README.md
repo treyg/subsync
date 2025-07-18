@@ -190,8 +190,6 @@ Open http://localhost:3000 in your browser.
 
 ## YouTube API Limitations
 
-**Important**: YouTube playlist transfer has been disabled due to API quota restrictions and rate limiting issues.
-
 ### Quota Structure
 
 YouTube Data API v3 uses a quota system where each operation consumes "units":

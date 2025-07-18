@@ -75,6 +75,21 @@ export function createRedditSubscriptions() {
 
   async function subscribe(accessToken: string, subredditName: string): Promise<TransferResult> {
     try {
+      // First, check if already subscribed
+      const isAlreadySubscribed = await checkSubscriptionStatus(accessToken, subredditName);
+      console.log(`Checking subscription status for r/${subredditName}: ${isAlreadySubscribed}`);
+      
+      if (isAlreadySubscribed) {
+        console.log(`Already subscribed to r/${subredditName}, returning alreadyExists: true`);
+        return {
+          targetId: subredditName,
+          targetName: `r/${subredditName}`,
+          success: true,
+          alreadyExists: true,
+        };
+      }
+
+      console.log(`Not subscribed to r/${subredditName}, proceeding with subscription`);
       const response = await fetch("https://oauth.reddit.com/api/subscribe", {
         method: "POST",
         headers: {
@@ -91,6 +106,7 @@ export function createRedditSubscriptions() {
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.log(`Subscribe API error for r/${subredditName}: ${response.status} - ${errorText}`);
 
         if (response.status === 403) {
           return {
@@ -110,6 +126,7 @@ export function createRedditSubscriptions() {
           response.status === 400 &&
           errorText.includes("already_subscribed")
         ) {
+          console.log(`Got already_subscribed error for r/${subredditName}`);
           return {
             targetId: subredditName,
             targetName: `r/${subredditName}`,
@@ -121,12 +138,14 @@ export function createRedditSubscriptions() {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
+      console.log(`Successfully subscribed to r/${subredditName}`);
       return {
         targetId: subredditName,
         targetName: `r/${subredditName}`,
         success: true,
       };
     } catch (error) {
+      console.error(`Error subscribing to r/${subredditName}:`, error);
       return {
         targetId: subredditName,
         targetName: `r/${subredditName}`,
@@ -189,24 +208,33 @@ export function createRedditSubscriptions() {
   }
 
   async function checkSubscriptionStatus(accessToken: string, subredditName: string): Promise<boolean> {
-    const response = await fetch(
-      `https://oauth.reddit.com/r/${subredditName}/about`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "User-Agent": "subsync-app/1.0.0",
-        },
-      }
-    );
+    try {
+      const response = await fetch(
+        `https://oauth.reddit.com/r/${subredditName}/about`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "User-Agent": "subsync-app/1.0.0",
+          },
+        }
+      );
 
-    if (!response.ok) {
+      if (!response.ok) {
+        console.log(`checkSubscriptionStatus API error for r/${subredditName}: ${response.status}`);
+        return false;
+      }
+
+      const data = (await response.json()) as {
+        data?: { user_is_subscriber?: boolean };
+      };
+      
+      const isSubscribed = data.data?.user_is_subscriber === true;
+      console.log(`checkSubscriptionStatus for r/${subredditName}: user_is_subscriber = ${data.data?.user_is_subscriber}, returning ${isSubscribed}`);
+      return isSubscribed;
+    } catch (error) {
+      console.error(`checkSubscriptionStatus error for r/${subredditName}:`, error);
       return false;
     }
-
-    const data = (await response.json()) as {
-      data?: { user_is_subscriber?: boolean };
-    };
-    return data.data?.user_is_subscriber === true;
   }
 
   return {
