@@ -108,29 +108,16 @@ Open http://localhost:3000 in your browser.
 
 ### Using Docker
 
-1. **Build the image**:
+**Option 1: Docker Compose (Recommended)**
+```bash
+docker compose up -d
+```
 
-   ```bash
-   bun run docker:build
-   ```
-
-2. **Run with Docker Compose**:
-   ```bash
-   docker-compose up -d
-   ```
-
-### Manual Production
-
-1. **Build the application**:
-
-   ```bash
-   bun run build
-   ```
-
-2. **Start production server**:
-   ```bash
-   bun run start
-   ```
+**Option 2: Manual Docker Build**
+```bash
+docker build -t subsync-app .
+docker run -p 3000:3000 --env-file .env subsync-app
+```
 
 ## Usage
 
