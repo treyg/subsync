@@ -232,7 +232,7 @@ class MultiPlatformTransferApp {
         this.elements.contentTransferLabel.textContent =
           "Content/Playlist transfer not yet supported for YouTube";
         this.elements.contentTransferNote.textContent =
-          "Only subscription transfers are available for YouTube.";
+          "Only subscription transfers are available for YouTube for now.";
         this.elements.transferSavedPosts.disabled = true;
         this.elements.transferSavedPosts.checked = false;
       }
