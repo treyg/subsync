@@ -226,12 +226,15 @@ class MultiPlatformTransferApp {
           "Also transfer saved posts from source account";
         this.elements.contentTransferNote.textContent =
           "Saved posts will be automatically fetched from your source account and transferred to your target account.";
+        this.elements.transferSavedPosts.disabled = false;
       } else if (sourcePlatform === "youtube") {
-        this.elements.contentTransferTitle.textContent = "Playlist Transfer";
+        this.elements.contentTransferTitle.textContent = "Content Transfer";
         this.elements.contentTransferLabel.textContent =
-          "Also transfer playlists from source account";
+          "Content/Playlist transfer not yet supported for YouTube";
         this.elements.contentTransferNote.textContent =
-          "Playlists will be automatically fetched from your source account and transferred to your target account.";
+          "Only subscription transfers are available for YouTube.";
+        this.elements.transferSavedPosts.disabled = true;
+        this.elements.transferSavedPosts.checked = false;
       }
     }
   }
@@ -732,6 +735,9 @@ class MultiPlatformTransferApp {
         .join("");
 
       this.elements.transferLog.innerHTML = logHTML;
+      // Auto-scroll to bottom
+      this.elements.transferLog.scrollTop =
+        this.elements.transferLog.scrollHeight;
     }
 
     // Show completion message
@@ -746,8 +752,14 @@ class MultiPlatformTransferApp {
         message += ` ${quotaErrors} items were skipped due to quota limits.`;
       }
       this.elements.transferLog.innerHTML += `<div class="log-entry success"><strong>${message}</strong></div>`;
+      // Auto-scroll to bottom
+      this.elements.transferLog.scrollTop =
+        this.elements.transferLog.scrollHeight;
     } else if (status.status === "failed") {
       this.elements.transferLog.innerHTML += `<div class="log-entry error"><strong>Transfer failed. Please try again.</strong></div>`;
+      // Auto-scroll to bottom
+      this.elements.transferLog.scrollTop =
+        this.elements.transferLog.scrollHeight;
     }
   }
 
