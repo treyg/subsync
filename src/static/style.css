@@ -24,7 +24,7 @@ header {
 
 header h1 {
     font-size: 2.5rem;
-    color: #ff4500;
+    color: #1976d2;
     margin-bottom: 0.5rem;
 }
 
@@ -176,6 +176,78 @@ header p {
     gap: 1rem;
 }
 
+.batch-selection-controls {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.batch-selection-controls h3 {
+    margin-bottom: 0.75rem;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.batch-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.batch-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.batch-size-selector label {
+    font-weight: 500;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.batch-size-select {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background-color: white;
+}
+
+.batch-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.batch-btn {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    background-color: white;
+    color: #007bff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.batch-btn:hover {
+    background-color: #007bff;
+    color: white;
+}
+
+.batch-btn.selected {
+    background-color: #007bff;
+    color: white;
+}
+
+.batch-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .search-filter {
     margin-bottom: 1rem;
 }
@@ -235,6 +307,7 @@ header p {
     display: flex;
     align-items: center;
     padding: 1rem;
+    gap: 1rem;
     border-bottom: 1px solid #e9ecef;
     transition: background-color 0.2s;
 }
@@ -345,13 +418,14 @@ header p {
 }
 
 .transfer-log {
-    max-height: 300px;
+    max-height: 500px;
     overflow-y: auto;
     background-color: #f8f9fa;
     border-radius: 8px;
     padding: 1rem;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 0.9rem;
+    border: 1px solid #dee2e6;
 }
 
 .log-entry {
@@ -401,7 +475,7 @@ header p {
         gap: 1rem;
         align-items: stretch;
     }
-    
+
     .transfer-actions {
         flex-direction: column;
     }
@@ -523,18 +597,309 @@ header p {
     font-size: 1.1rem;
 }
 
+/* Quota Warning Styles */
+.quota-warning {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    border: 2px solid #f39c12;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(243, 156, 18, 0.2);
+}
+
+.warning-header {
+    font-weight: bold;
+    font-size: 1.1rem;
+    color: #d68910;
+    margin-bottom: 0.5rem;
+}
+
+.warning-message {
+    color: #b7950b;
+    margin-bottom: 0.75rem;
+    line-height: 1.4;
+}
+
+.warning-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.quota-failed {
+    background: #f39c12;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Enhanced Log Entry Styles */
+.log-entry.quota-exceeded {
+    background: #fff3cd;
+    border-left: 4px solid #f39c12;
+    color: #b7950b;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.25rem;
+    border-radius: 4px;
+}
+
+.log-entry.quota-exceeded::before {
+    content: "⚠️ ";
+    margin-right: 0.5rem;
+}
+
+/* Quota Stat Styles */
+.quota-stat {
+    background: #fff3cd;
+    border: 2px solid #f39c12;
+}
+
+.quota-stat .stat-number {
+    color: #d68910;
+}
+
+.quota-stat .stat-label {
+    color: #b7950b;
+}
+
+/* Quota Dialog Styles */
+.quota-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+}
+
+.quota-dialog {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border: 2px solid #f39c12;
+}
+
+.quota-dialog-header {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 10px 10px 0 0;
+}
+
+.quota-dialog-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.quota-dialog-content {
+    padding: 1.5rem;
+    line-height: 1.6;
+    color: #333;
+}
+
+.quota-dialog-content p {
+    margin-bottom: 1rem;
+}
+
+.quota-dialog-content ul {
+    margin: 0.5rem 0 1rem 1.5rem;
+    padding: 0;
+}
+
+.quota-dialog-content li {
+    margin-bottom: 0.5rem;
+}
+
+.quota-dialog-content strong {
+    color: #d68910;
+}
+
+.quota-dialog-actions {
+    padding: 1rem 1.5rem 1.5rem;
+    text-align: center;
+    border-top: 1px solid #eee;
+}
+
+.quota-dialog-actions .btn {
+    background: #f39c12;
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.quota-dialog-actions .btn:hover {
+    background: #e67e22;
+}
+
+/* Platform Selection Styles */
+.platform-selection {
+    margin-bottom: 1rem;
+    text-align: left;
+}
+
+.platform-selection label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.platform-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.platform-select:focus {
+    outline: none;
+    border-color: #1976d2;
+}
+
+.platform-select:disabled {
+    background-color: #f8f9fa;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Platform Compatibility */
+.platform-compatibility {
+    margin: 1rem 0 2rem 0;
+    text-align: center;
+}
+
+.compatibility-info {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.compatibility-info.compatible {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.compatibility-info.cross-platform {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.compatibility-info.warning {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Multi-platform button styles */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn:disabled:hover {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    transform: none;
+}
+
+/* Platform-specific subscription item styles */
+.subscription-item[data-platform="reddit"] {
+    border-left: 4px solid #ff4500;
+}
+
+.subscription-item[data-platform="youtube"] {
+    border-left: 4px solid #ff0000;
+}
+
+.subscription-meta {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.25rem;
+}
+
+/* Enhanced subscription info */
+.subscription-info {
+    flex-grow: 1;
+}
+
+.subscription-name {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0.25rem;
+}
+
+.subscription-description {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    line-height: 1.4;
+}
+
+/* Transfer log enhancements */
+.log-entry {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.log-entry.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.log-entry.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
 @media (max-width: 768px) {
     .saved-posts-controls {
         gap: 0.75rem;
     }
-    
+
     .file-upload-wrapper {
         flex-direction: column;
         align-items: stretch;
         gap: 0.5rem;
     }
-    
+
     .checkbox-wrapper {
+        font-size: 0.9rem;
+    }
+
+    .platform-compatibility {
+        margin: 1rem 0;
+    }
+
+    .compatibility-info {
+        padding: 0.5rem 1rem;
         font-size: 0.9rem;
     }
 }

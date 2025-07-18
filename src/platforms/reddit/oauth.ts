@@ -1,9 +1,5 @@
-interface RedditTokens {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  token_type: string;
-}
+import type { PlatformTokens, PlatformAccount, AuthUrlParams } from '../types';
+import { getPlatformConfig } from '../../config/platforms';
 
 interface RedditUser {
   name: string;
@@ -11,45 +7,37 @@ interface RedditUser {
 }
 
 export function createRedditOAuth() {
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const redirectUri = process.env.REDDIT_REDIRECT_URI;
-
-  if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error("Missing Reddit OAuth configuration");
-  }
+  const config = getPlatformConfig('reddit');
 
   function getAuthUrl() {
     const state = crypto.randomUUID();
-    const params = new URLSearchParams({
-      client_id: clientId,
+    const params = {
+      client_id: config.clientId || '',
       response_type: "code",
       state,
-      redirect_uri: redirectUri,
+      redirect_uri: config.redirectUri || '',
       duration: "permanent",
-      scope: "mysubreddits subscribe identity history save",
-    });
-
-    return {
-      authUrl: `https://www.reddit.com/api/v1/authorize?${params}`,
-      state,
+      scope: config.scopes.join(" "),
     };
+
+    const authUrl = `${config.baseUrl}/api/v1/authorize?${new URLSearchParams(params)}`;
+    return { authUrl, state };
   }
 
-  async function exchangeCodeForTokens(code: string): Promise<RedditTokens> {
-    const auth = btoa(`${clientId}:${clientSecret}`);
+  async function exchangeCodeForTokens(code: string): Promise<PlatformTokens> {
+    const auth = btoa(`${config.clientId}:${config.clientSecret}`);
 
     const response = await fetch("https://www.reddit.com/api/v1/access_token", {
       method: "POST",
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "reddit-transfer-app/1.0.0",
+        "User-Agent": "subsync-app/1.0.0",
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
         code,
-        redirect_uri: redirectUri,
+        redirect_uri: config.redirectUri || '',
       }),
     });
 
@@ -58,20 +46,18 @@ export function createRedditOAuth() {
       throw new Error(`OAuth token exchange failed: ${error}`);
     }
 
-    return (await response.json()) as RedditTokens;
+    return (await response.json()) as PlatformTokens;
   }
 
-  async function refreshAccessToken(
-    refreshToken: string
-  ): Promise<RedditTokens> {
-    const auth = btoa(`${clientId}:${clientSecret}`);
+  async function refreshAccessToken(refreshToken: string): Promise<PlatformTokens> {
+    const auth = btoa(`${config.clientId}:${config.clientSecret}`);
 
     const response = await fetch("https://www.reddit.com/api/v1/access_token", {
       method: "POST",
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": "reddit-transfer-app/1.0.0",
+        "User-Agent": "subsync-app/1.0.0",
       },
       body: new URLSearchParams({
         grant_type: "refresh_token",
@@ -84,14 +70,14 @@ export function createRedditOAuth() {
       throw new Error(`Token refresh failed: ${error}`);
     }
 
-    return (await response.json()) as RedditTokens;
+    return (await response.json()) as PlatformTokens;
   }
 
-  async function getUserInfo(accessToken: string): Promise<RedditUser> {
+  async function getUserInfo(accessToken: string): Promise<PlatformAccount> {
     const response = await fetch("https://oauth.reddit.com/api/v1/me", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        "User-Agent": "reddit-transfer-app/1.0.0",
+        "User-Agent": "subsync-app/1.0.0",
       },
     });
 
@@ -100,7 +86,16 @@ export function createRedditOAuth() {
       throw new Error(`Failed to get user info: ${error}`);
     }
 
-    return (await response.json()) as RedditUser;
+    const user = (await response.json()) as RedditUser;
+    
+    return {
+      username: user.name,
+      displayName: user.name,
+      accessToken,
+      refreshToken: '', // Will be set by caller
+      expiresAt: new Date(), // Will be set by caller
+      platform: 'reddit'
+    };
   }
 
   return {
