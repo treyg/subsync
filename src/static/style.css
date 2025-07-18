@@ -345,13 +345,14 @@ header p {
 }
 
 .transfer-log {
-    max-height: 300px;
+    max-height: 500px;
     overflow-y: auto;
     background-color: #f8f9fa;
     border-radius: 8px;
     padding: 1rem;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
     font-size: 0.9rem;
+    border: 1px solid #dee2e6;
 }
 
 .log-entry {
@@ -401,7 +402,7 @@ header p {
         gap: 1rem;
         align-items: stretch;
     }
-    
+
     .transfer-actions {
         flex-direction: column;
     }
@@ -809,21 +810,21 @@ header p {
     .saved-posts-controls {
         gap: 0.75rem;
     }
-    
+
     .file-upload-wrapper {
         flex-direction: column;
         align-items: stretch;
         gap: 0.5rem;
     }
-    
+
     .checkbox-wrapper {
         font-size: 0.9rem;
     }
-    
+
     .platform-compatibility {
         margin: 1rem 0;
     }
-    
+
     .compatibility-info {
         padding: 0.5rem 1rem;
         font-size: 0.9rem;
