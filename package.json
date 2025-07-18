@@ -10,9 +10,7 @@
     "start": "bun run src/server.ts",
     "build": "bun build src/server.ts --outdir ./dist --target bun",
     "docker:build": "docker build -t subsync-app .",
-    "docker:run": "docker run -p 3000:3000 --env-file .env subsync-app",
-    "dev:legacy": "bun run --watch src/server-legacy.ts",
-    "start:legacy": "bun run src/server-legacy.ts"
+    "docker:run": "docker run -p 3000:3000 --env-file .env subsync-app"
   },
   "devDependencies": {
     "@types/bun": "latest"
